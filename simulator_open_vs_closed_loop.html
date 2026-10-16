@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulator Open-Loop vs Closed-Loop Control System</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --card: #090d16;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --open: #f59e0b;
+      --closed: #22c55e;
+      --ref: #e2e8f0;
+      --dist: #ef4444;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body {
+      margin: 0; padding: 20px;
+      background: var(--bg); color: var(--text);
+      display: flex; justify-content: center;
+    }
+    .container {
+      max-width: 1000px; width: 100%;
+      background: var(--panel); border-radius: 12px;
+      padding: 20px; border: 1px solid #334155;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+    h2 { margin-top: 0; font-size: 1.3rem; color: var(--accent); }
+    .controls {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px; background: #0f172a; padding: 15px; border-radius: 8px;
+      margin-bottom: 18px; align-items: end;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+    input[type="range"], button {
+      padding: 9px 12px; border-radius: 6px; border: 1px solid #475569;
+      background: #1e293b; color: white; font-size: 0.9rem; font-weight: 600;
+    }
+    .btn-row { display: flex; gap: 8px; }
+    button { cursor: pointer; flex: 1; transition: 0.15s; }
+    button:hover { background: #334155; }
+    .btn-dist { border-color: #ef4444; color: #f87171; }
+    .btn-clear { border-color: #22c55e; color: #4ade80; }
+    .dashboard {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 768px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
+    .metric-card {
+      background: var(--card); border: 1px solid #334155;
+      border-radius: 8px; padding: 12px; text-align: center;
+    }
+    .metric-title { font-size: 0.76rem; color: var(--muted); text-transform: uppercase; }
+    .metric-value { font-size: 1.45rem; font-weight: bold; margin-top: 4px; }
+    .metric-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 3px; }
+    .canvas-box {
+      background: var(--card); border: 1px solid #334155;
+      border-radius: 8px; padding: 14px; margin-bottom: 14px;
+    }
+    canvas { width: 100%; border-radius: 6px; display: block; }
+    .info-box {
+      padding: 14px; background: #0f172a;
+      border-left: 4px solid var(--accent); border-radius: 6px;
+      font-size: 0.9rem; line-height: 1.55; color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Simulator Interaktif: Sistem Loop Terbuka (Open-Loop) vs Loop Tertutup (Closed-Loop)</h2>
+
+  <div class="controls">
+    <div class="control-group">
+      <label for="spSlider">1. Target Set-Point r(t): <span id="spLabel" style="color:#38bdf8">1000</span> RPM</label>
+      <input type="range" id="spSlider" min="400" max="1500" step="50" value="1000">
+    </div>
+
+    <div class="control-group">
+      <label for="distSlider">2. Gangguan Beban Luar d(t): <span id="distLabel" style="color:#ef4444">0</span>% Tanjakan/Gesekan</label>
+      <input type="range" id="distSlider" min="0" max="60" step="5" value="0">
+    </div>
+
+    <div class="control-group">
+      <label>3. Uji Skenario Cepat:</label>
+      <div class="btn-row">
+        <button class="btn-dist" id="btnAddLoad">⚡ Beri Beban Berat (40%)</button>
+        <button class="btn-clear" id="btnRemoveLoad">✅ Lepas Beban (0%)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="metric-card">
+      <div class="metric-title">Target Set-Point r(t)</div>
+      <div class="metric-value" id="spMetric" style="color:#e2e8f0;">1000 RPM</div>
+      <div class="metric-sub">Kecepatan Acuan Ideal</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Output Open-Loop c(t)</div>
+      <div class="metric-value" id="openMetric" style="color:#f59e0b;">1000 RPM</div>
+      <div class="metric-sub" id="openSub">PWM Tetap (Buta Beban)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Output Closed-Loop c(t)</div>
+      <div class="metric-value" id="closedMetric" style="color:#22c55e;">1000 RPM</div>
+      <div class="metric-sub" id="closedSub">Umpan Balik Aktif</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Error Closed-Loop e(t)</div>
+      <div class="metric-value" id="errMetric" style="color:#38bdf8;">0 RPM</div>
+      <div class="metric-sub" id="pwmSub">Koreksi u(t) Otomatis</div>
+    </div>
+  </div>
+
+  <div class="canvas-box">
+    <canvas id="simCanvas" width="940" height="330"></canvas>
+  </div>
+
+  <div class="info-box" id="infoText">
+    <strong>💡 Cara Mengamati:</strong> Klik tombol <strong>"⚡ Beri Beban Berat (40%)"</strong>! Perhatikan bagaimana kurva <strong>Open-Loop (Oranye)</strong> langsung anjlok permanen karena kontroler tidak memiliki sensor umpan balik (tidak tahu kalau motor sedang keberatan beban). Sebaliknya, sistem <strong>Closed-Loop (Hijau)</strong> mendeteksi munculnya <em>Actuating Error Signal e(t)</em> lewat sensor <em>H(s)</em>, lalu otomatis menaikkan sinyal kontrol <em>u(t)</em> untuk mengembalikan kecepatan ke <strong>Set-Point r(t)</strong>!
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const spSlider = document.getElementById('spSlider');
+  const distSlider = document.getElementById('distSlider');
+  const spLabel = document.getElementById('spLabel');
+  const distLabel = document.getElementById('distLabel');
+  const btnAddLoad = document.getElementById('btnAddLoad');
+  const btnRemoveLoad = document.getElementById('btnRemoveLoad');
+
+  const spMetric = document.getElementById('spMetric');
+  const openMetric = document.getElementById('openMetric');
+  const openSub = document.getElementById('openSub');
+  const closedMetric = document.getElementById('closedMetric');
+  const closedSub = document.getElementById('closedSub');
+  const errMetric = document.getElementById('errMetric');
+  const pwmSub = document.getElementById('pwmSub');
+
+  let sp = 1000;
+  let dist = 0; // 0 to 60 (%)
+  let openOut = 1000;
+  let closedOut = 1000;
+  let integralErr = 0;
+
+  const history = [];
+  const maxHist = 420;
+
+  spSlider.addEventListener('input', (e) => {
+    sp = parseFloat(e.target.value);
+    spLabel.textContent = sp;
+  });
+
+  distSlider.addEventListener('input', (e) => {
+    dist = parseFloat(e.target.value);
+    distLabel.textContent = dist;
+  });
+
+  btnAddLoad.addEventListener('click', () => {
+    dist = 40;
+    distSlider.value = 40;
+    distLabel.textContent = 40;
+  });
+
+  btnRemoveLoad.addEventListener('click', () => {
+    dist = 0;
+    distSlider.value = 0;
+    distLabel.textContent = 0;
+  });
+
+  function step() {
+    const dt = 0.05;
+    const loadDrop = dist * 9.5; // pengurangan kecepatan akibat gangguan d(t)
+
+    // 1. Open-loop: u_open hanya dikalibrasi untuk kondisi tanpa beban (sp)
+    const uOpen = sp;
+    const targetOpen = Math.max(0, uOpen - loadDrop);
+    openOut += (targetOpen - openOut) * 0.12;
+
+    // 2. Closed-loop (PI Controller dengan Feedback Sensor H(s)=1)
+    const err = sp - closedOut;
+    integralErr += err * dt;
+    integralErr = Math.max(-1500, Math.min(1500, integralErr));
+    const uClosed = closedOut + 0.35 * err + 1.4 * integralErr;
+    const plantRaw = Math.max(0, uClosed - loadDrop);
+    closedOut += (plantRaw - closedOut) * 0.15;
+
+    history.push({ sp, openOut, closedOut, dist });
+    if (history.length > maxHist) history.shift();
+
+    // Update UI
+    spMetric.textContent = `${Math.round(sp)} RPM`;
+    openMetric.textContent = `${Math.round(openOut)} RPM`;
+    const openErr = Math.round(sp - openOut);
+    openSub.textContent = openErr > 5 ? `Melenceng -${openErr} RPM (Buta)` : 'Sesuai Kalibrasi Awal';
+
+    closedMetric.textContent = `${Math.round(closedOut)} RPM`;
+    closedSub.textContent = `Terkoreksi Feedback b(t)`;
+    errMetric.textContent = `${Math.round(err)} RPM`;
+    pwmSub.textContent = dist > 0 ? `Kompensasi Beban +${Math.round(loadDrop)} RPM` : `Sinyal Kontrol u(t) Normal`;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const w = canvas.width;
+    const h = canvas.height;
+    const padL = 65, padR = 25, padT = 30, padB = 35;
+    const pw = w - padL - padR;
+    const ph = h - padT - padB;
+
+    const maxRPM = 1700;
+    const yOf = (val) => padT + ph - (val / maxRPM) * ph;
+
+    // Grid horizontal
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1;
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#64748b';
+    for (let rpm = 0; rpm <= 1600; rpm += 400) {
+      const y = yOf(rpm);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      ctx.fillText(`${rpm}`, 18, y + 4);
+    }
+
+    // Legenda
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#e2e8f0'; ctx.fillText('--- Set-Point r(t)', padL + 10, 20);
+    ctx.fillStyle = '#22c55e'; ctx.fillText('─── Closed-Loop c(t) (Dengan Feedback)', padL + 150, 20);
+    ctx.fillStyle = '#f59e0b'; ctx.fillText('─── Open-Loop c(t) (Tanpa Feedback)', padL + 430, 20);
+    if (dist > 0) {
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText(`⚠️ GANGGUAN BEBAN AKTIF: d(t) = ${dist}%`, padL + 690, 20);
+    }
+
+    const drawCurve = (key, color, dashed = false, width = 2.5) => {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.setLineDash(dashed ? [6, 5] : []);
+      for (let i = 0; i < history.length; i++) {
+        const x = padL + (i / (maxHist - 1)) * pw;
+        const y = yOf(history[i][key]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+
+    drawCurve('sp', '#94a3b8', true, 2);
+    drawCurve('openOut', '#f59e0b', false, 2.8);
+    drawCurve('closedOut', '#22c55e', false, 3);
+  }
+
+  function loop() {
+    step();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  for (let i = 0; i < 60; i++) step();
+  loop();
+</script>
+
+</body>
+</html>

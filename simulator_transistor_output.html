@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulator Konfigurasi Output Transistor</title>
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b; --text: #f8fafc;
+      --high: #22c55e; --low: #38bdf8; --hiz: #f59e0b;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { margin: 0; padding: 20px; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+    .box { max-width: 820px; width: 100%; background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+    h2 { margin-top: 0; font-size: 1.25rem; color: #38bdf8; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; background: #0f172a; padding: 12px; border-radius: 8px; align-items: center; }
+    select, button { padding: 9px 14px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: white; font-weight: 600; cursor: pointer; }
+    button.active { background: #22c55e; color: #090d16; border-color: #22c55e; }
+    canvas { background: #090d16; border-radius: 8px; width: 100%; border: 1px solid #334155; }
+    .desc { margin-top: 12px; padding: 12px; background: #0f172a; border-radius: 8px; font-size: 0.9rem; line-height: 1.5; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>Simulator Aliran Arus Output: NPN vs PNP vs Push-Pull</h2>
+  <div class="toolbar">
+    <label>Tipe Rangkaian:</label>
+    <select id="typeSelect">
+      <option value="npn">1. NPN Open-Collector (Current Sinking + Pull-Up)</option>
+      <option value="pnp">2. PNP Open-Collector (Current Sourcing + Pull-Down)</option>
+      <option value="pushpull">3. Push-Pull / Totem-Pole (Aktif Sink & Source)</option>
+      <option value="tristate">4. Tri-State Output (High-Impedance / Hi-Z)</option>
+    </select>
+
+    <button id="toggleBtn" class="active">Status Sensor: AKTIF (ON)</button>
+  </div>
+
+  <canvas id="circuitCanvas" width="780" height="340"></canvas>
+  <div class="desc" id="descText"></div>
+</div>
+
+<script>
+  const canvas = document.getElementById('circuitCanvas');
+  const ctx = canvas.getContext('2d');
+  const typeSelect = document.getElementById('typeSelect');
+  const toggleBtn = document.getElementById('toggleBtn');
+  const descText = document.getElementById('descText');
+
+  let sensorOn = true;
+  let offset = 0;
+
+  toggleBtn.addEventListener('click', () => {
+    sensorOn = !sensorOn;
+    toggleBtn.textContent = sensorOn ? 'Status Sensor: AKTIF (ON)' : 'Status Sensor: MATI (OFF)';
+    toggleBtn.className = sensorOn ? 'active' : '';
+    updateDescription();
+  });
+
+  typeSelect.addEventListener('change', updateDescription);
+
+  function updateDescription() {
+    const t = typeSelect.value;
+    if (t === 'npn') {
+      descText.innerHTML = sensorOn
+        ? '<strong>NPN Saat AKTIF (ON):</strong> Sakelar transistor bawah menutup ke GND. Arus dari Resistor Pull-Up ditarik masuk ke sensor menuju GND (<em>Current Sinking</em>). Tegangan di pin Input Kontroler tertarik turun menjadi <strong>LOW (0V)</strong>.'
+        : '<strong>NPN Saat MATI (OFF):</strong> Sakelar transistor terbuka. Resistor Pull-Up menarik jalur sinyal ke VCC, sehingga pin Input Kontroler membaca logika <strong>HIGH (+VCC)</strong>.';
+    } else if (t === 'pnp') {
+      descText.innerHTML = sensorOn
+        ? '<strong>PNP Saat AKTIF (ON):</strong> Sakelar transistor atas menutup ke +VCC. Sensor menyuplai arus positif keluar menuju pin Input Kontroler dan Resistor Pull-Down (<em>Current Sourcing</em>). Kontroler membaca logika <strong>HIGH (+24V/5V)</strong>.'
+        : '<strong>PNP Saat MATI (OFF):</strong> Sakelar transistor atas terbuka. Resistor Pull-Down di sisi kontroler menarik sisa tegangan ke GND, sehingga kontroler membaca logika <strong>LOW (0V)</strong>.';
+    } else if (t === 'pushpull') {
+      descText.innerHTML = sensorOn
+        ? '<strong>Push-Pull Saat HIGH:</strong> Transistor Atas ON dan Transistor Bawah OFF. Arus langsung didorong dari +VCC ke Kontroler (<em>Sourcing</em>) tanpa butuh resistor eksternal. Output = <strong>HIGH</strong>.'
+        : '<strong>Push-Pull Saat LOW:</strong> Transistor Atas OFF dan Transistor Bawah ON. Arus dari jalur sinyal langsung ditarik ke GND (<em>Sinking</em>) dengan cepat. Output = <strong>LOW (0V)</strong>.';
+    } else {
+      descText.innerHTML = '<strong>Mode Tri-State (Hi-Z):</strong> Kedua transistor (Atas & Bawah) sengaja dimatikan (<strong>OFF</strong>) bersamaan. Jalur output terputus secara elektrik (impedansi tinggi) sehingga aman berbagi jalur bus komunikasi dengan perangkat lain.';
+    }
+  }
+
+  function drawSwitch(x, y, closed, label) {
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 3;
+    // Titik terminal atas & bawah
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath(); ctx.arc(x, y - 22, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y + 22, 4, 0, Math.PI * 2); ctx.fill();
+
+    // Tuas sakelar transistor
+    ctx.beginPath();
+    ctx.strokeStyle = closed ? '#22c55e' : '#ef4444';
+    ctx.moveTo(x, y + 22);
+    if (closed) ctx.lineTo(x, y - 22);
+    else ctx.lineTo(x - 24, y - 16);
+    ctx.stroke();
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(label, x - 95, y + 4);
+  }
+
+  function drawResistor(x, y, label) {
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(x - 10, y - 24, 20, 48);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(label, x + 16, y + 4);
+  }
+
+  function drawCurrentFlow(points, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 8]);
+    ctx.lineDashOffset = -offset;
+    ctx.beginPath();
+    points.forEach((p, idx) => {
+      if (idx === 0) ctx.moveTo(p[0], p[1]);
+      else ctx.lineTo(p[0], p[1]);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    offset = (offset + 0.6) % 16;
+    const t = typeSelect.value;
+
+    // Kotak Blok Sensor (Kiri) & Blok Kontroler/PLC (Kanan)
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(40, 30, 280, 280);
+    ctx.strokeRect(440, 30, 300, 280);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('INTERNAL SENSOR / ENCODER', 60, 55);
+    ctx.fillText('MODUL INPUT PLC / MIKROKONTROLER', 460, 55);
+
+    // Rel +VCC (Atas) dan GND (Bawah)
+    ctx.fillStyle = '#ef4444';
+    ctx.fillText('+VCC (24V / 5V)', 200, 80);
+    ctx.fillText('+VCC', 530, 80);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('GND (0V)', 215, 295);
+    ctx.fillText('GND (0V)', 530, 295);
+
+    // Kabel Output Tengah (Pin Output Sensor -> Pin Input Kontroler)
+    const midY = 175;
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(230, midY);
+    ctx.lineTo(620, midY);
+    ctx.stroke();
+
+    let logicLevel = 'HIGH';
+
+    if (t === 'npn') {
+      // Jalur GND di Sensor
+      ctx.beginPath(); ctx.moveTo(230, midY); ctx.lineTo(230, 218); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(230, 262); ctx.lineTo(230, 280); ctx.stroke();
+      drawSwitch(230, 240, sensorOn, 'Q1 (NPN)');
+
+      // Resistor Pull-Up di Kontroler
+      ctx.beginPath(); ctx.moveTo(545, 90); ctx.lineTo(545, 106); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(545, 154); ctx.lineTo(545, midY); ctx.stroke();
+      drawResistor(545, 130, 'R Pull-Up');
+
+      if (sensorOn) {
+        logicLevel = 'LOW (0V)';
+        drawCurrentFlow([[545, 90], [545, midY], [230, midY], [230, 280]], '#38bdf8');
+      } else {
+        logicLevel = 'HIGH (+VCC)';
+        drawCurrentFlow([[545, 90], [545, midY], [620, midY]], '#22c55e');
+      }
+    } else if (t === 'pnp') {
+      // Jalur VCC di Sensor
+      ctx.beginPath(); ctx.moveTo(230, 90); ctx.lineTo(230, 108); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(230, 152); ctx.lineTo(230, midY); ctx.stroke();
+      drawSwitch(230, 130, sensorOn, 'Q1 (PNP)');
+
+      // Resistor Pull-Down di Kontroler
+      ctx.beginPath(); ctx.moveTo(545, midY); ctx.lineTo(545, 206); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(545, 254); ctx.lineTo(545, 280); ctx.stroke();
+      drawResistor(545, 230, 'R Pull-Down');
+
+      if (sensorOn) {
+        logicLevel = 'HIGH (+VCC)';
+        drawCurrentFlow([[230, 90], [230, midY], [620, midY]], '#22c55e');
+      } else {
+        logicLevel = 'LOW (0V)';
+        drawCurrentFlow([[620, midY], [545, midY], [545, 280]], '#38bdf8');
+      }
+    } else if (t === 'pushpull') {
+      // Transistor Atas & Bawah di Sensor
+      ctx.beginPath(); ctx.moveTo(230, 90); ctx.lineTo(230, 108); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(230, 152); ctx.lineTo(230, midY); ctx.stroke();
+      drawSwitch(230, 130, sensorOn, 'Q_Top (PNP)');
+
+      ctx.beginPath(); ctx.moveTo(230, midY); ctx.lineTo(230, 208); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(230, 252); ctx.lineTo(230, 280); ctx.stroke();
+      drawSwitch(230, 230, !sensorOn, 'Q_Bot (NPN)');
+
+      if (sensorOn) {
+        logicLevel = 'HIGH (+VCC)';
+        drawCurrentFlow([[230, 90], [230, midY], [620, midY]], '#22c55e');
+      } else {
+        logicLevel = 'LOW (0V)';
+        drawCurrentFlow([[620, midY], [230, midY], [230, 280]], '#38bdf8');
+      }
+    } else {
+      // Tri-State: Kedua sakelar terbuka
+      ctx.beginPath(); ctx.moveTo(230, 90); ctx.lineTo(230, 108); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(230, 152); ctx.lineTo(230, midY); ctx.stroke();
+      drawSwitch(230, 130, false, 'Q_Top (OFF)');
+
+      ctx.beginPath(); ctx.moveTo(230, midY); ctx.lineTo(230, 208); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(230, 252); ctx.lineTo(230, 280); ctx.stroke();
+      drawSwitch(230, 230, false, 'Q_Bot (OFF)');
+      logicLevel = 'Hi-Z (Floating)';
+    }
+
+    // Indikator Pembacaan di Pin Input Kontroler
+    ctx.fillStyle = logicLevel.startsWith('HIGH') ? '#22c55e' : (logicLevel.startsWith('LOW') ? '#38bdf8' : '#f59e0b');
+    ctx.fillRect(620, midY - 22, 105, 44);
+    ctx.fillStyle = '#090d16';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('PIN INPUT:', 630, midY - 4);
+    ctx.fillText(logicLevel, 630, midY + 14);
+
+    requestAnimationFrame(render);
+  }
+
+  updateDescription();
+  render();
+</script>
+
+</body>
+</html>

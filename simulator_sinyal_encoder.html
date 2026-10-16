@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulator Sinyal Rotary Encoder</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --chA: #22c55e;
+      --chB: #f59e0b;
+      --chZ: #ef4444;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body {
+      margin: 0; padding: 20px;
+      background: var(--bg); color: var(--text);
+      display: flex; justify-content: center;
+    }
+    .container {
+      max-width: 960px; width: 100%;
+      background: var(--panel); border-radius: 12px;
+      padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      border: 1px solid #334155;
+    }
+    h2 { margin-top: 0; font-size: 1.3rem; color: var(--accent); }
+    .controls {
+      display: flex; flex-wrap: wrap; gap: 15px;
+      background: #0f172a; padding: 15px; border-radius: 8px;
+      margin-bottom: 20px; align-items: center;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 180px; }
+    label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+    select, input[type="range"] {
+      padding: 8px; border-radius: 6px; border: 1px solid #475569;
+      background: #1e293b; color: white; font-size: 0.9rem;
+    }
+    .grid {
+      display: grid; grid-template-columns: 320px 1fr; gap: 20px;
+    }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    .canvas-box {
+      background: #090d16; border-radius: 8px; padding: 12px;
+      display: flex; flex-direction: column; align-items: center;
+      border: 1px solid #334155;
+    }
+    canvas { border-radius: 6px; max-width: 100%; }
+    .status-bar {
+      margin-top: 12px; width: 100%; font-size: 0.85rem;
+      background: #1e293b; padding: 10px; border-radius: 6px;
+      display: flex; justify-content: space-between;
+    }
+    .badge {
+      padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;
+    }
+    .cw { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    .ccw { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .stop { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+    .bit-box {
+      display: inline-block; width: 22px; height: 22px; line-height: 22px;
+      text-align: center; border-radius: 4px; margin-right: 3px;
+      font-family: monospace; font-weight: bold;
+    }
+    .bit-1 { background: #38bdf8; color: #0f172a; }
+    .bit-0 { background: #334155; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Simulator Interaktif: Cara Kerja & Sinyal Output Encoder</h2>
+  
+  <div class="controls">
+    <div class="control-group">
+      <label for="modeSelect">1. Pilih Jenis Sinyal Output:</label>
+      <select id="modeSelect">
+        <option value="incremental">Incremental (Quadrature A, B, Z)</option>
+        <option value="sincos">SinCos Encoder (Gelombang Sin & Cos)</option>
+        <option value="absolute">Absolute 4-Bit (Gray Code vs Biner)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="speedRange">2. Kecepatan & Arah Putar (<span id="speedVal">15</span> RPM):</label>
+      <input type="range" id="speedRange" min="-40" max="40" value="15">
+    </div>
+
+    <div class="control-group">
+      <label for="angleRange">3. Putar Manual Sudut (<span id="angleVal">0</span>°):</label>
+      <input type="range" id="angleRange" min="0" max="359" value="0">
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Panel Kiri: Piringan Encoder -->
+    <div class="canvas-box">
+      <canvas id="discCanvas" width="280" height="280"></canvas>
+      <div class="status-bar">
+        <span>Sudut: <strong id="degText">0.0°</strong></span>
+        <span id="dirBadge" class="badge cw">CW (A Mendahului B)</span>
+      </div>
+    </div>
+
+    <!-- Panel Kanan: Grafik Osiloskop & Data -->
+    <div class="canvas-box">
+      <canvas id="scopeCanvas" width="560" height="280"></canvas>
+      <div class="status-bar" id="dataReadout">
+        <span>Ch A: <strong id="valA">0</strong> | Ch B: <strong id="valB">0</strong> | Ch Z: <strong id="valZ">0</strong></span>
+        <span>Resolusi: <strong>8 PPR</strong></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const discCanvas = document.getElementById('discCanvas');
+  const dCtx = discCanvas.getContext('2d');
+  const scopeCanvas = document.getElementById('scopeCanvas');
+  const sCtx = scopeCanvas.getContext('2d');
+
+  const modeSelect = document.getElementById('modeSelect');
+  const speedRange = document.getElementById('speedRange');
+  const angleRange = document.getElementById('angleRange');
+  const speedVal = document.getElementById('speedVal');
+  const angleVal = document.getElementById('angleVal');
+  const degText = document.getElementById('degText');
+  const dirBadge = document.getElementById('dirBadge');
+  const dataReadout = document.getElementById('dataReadout');
+
+  let angle = 0; // 0 - 360 derajat
+  let rpm = 15;
+  const PPR = 8; // 8 siklus per putaran agar mudah diamati
+  const history = [];
+  const maxHistory = 260;
+
+  speedRange.addEventListener('input', (e) => {
+    rpm = parseFloat(e.target.value);
+    speedVal.textContent = rpm;
+    updateDirectionBadge();
+  });
+
+  angleRange.addEventListener('input', (e) => {
+    rpm = 0;
+    speedRange.value = 0;
+    speedVal.textContent = 0;
+    angle = parseFloat(e.target.value);
+    angleVal.textContent = Math.round(angle);
+    updateDirectionBadge();
+    pushSignalState();
+  });
+
+  modeSelect.addEventListener('change', () => {
+    history.length = 0;
+  });
+
+  function updateDirectionBadge() {
+    if (rpm > 0) {
+      dirBadge.textContent = 'Putar Kanan / CW (A leads B)';
+      dirBadge.className = 'badge cw';
+    } else if (rpm < 0) {
+      dirBadge.textContent = 'Putar Kiri / CCW (B leads A)';
+      dirBadge.className = 'badge ccw';
+    } else {
+      dirBadge.textContent = 'Berhenti (Mode Manual)';
+      dirBadge.className = 'badge stop';
+    }
+  }
+
+  function getSignals(deg) {
+    const rad = (deg * Math.PI) / 180;
+    const sinVal = Math.sin(PPR * rad);
+    const cosVal = Math.cos(PPR * rad);
+    const chA = sinVal >= 0 ? 1 : 0;
+    const chB = cosVal >= 0 ? 1 : 0;
+    const chZ = (deg >= 0 && deg < 12) ? 1 : 0;
+
+    // 4-bit Absolute (16 sektor @ 22.5 derajat)
+    const sector = Math.floor((deg % 360) / 22.5);
+    const gray = sector ^ (sector >> 1);
+
+    return { sinVal, cosVal, chA, chB, chZ, sector, gray };
+  }
+
+  function pushSignalState() {
+    const sig = getSignals(angle);
+    history.push(sig);
+    if (history.length > maxHistory) history.shift();
+  }
+
+  function drawDisc() {
+    dCtx.clearRect(0, 0, discCanvas.width, discCanvas.height);
+    const cx = discCanvas.width / 2;
+    const cy = discCanvas.height / 2;
+    const rOuter = 115;
+    const mode = modeSelect.value;
+
+    dCtx.save();
+    dCtx.translate(cx, cy);
+    dCtx.rotate((angle * Math.PI) / 180);
+
+    // Piringan Dasar
+    dCtx.beginPath();
+    dCtx.arc(0, 0, rOuter, 0, Math.PI * 2);
+    dCtx.fillStyle = '#1e293b';
+    dCtx.fill();
+    dCtx.lineWidth = 3;
+    dCtx.strokeStyle = '#475569';
+    dCtx.stroke();
+
+    if (mode === 'incremental' || mode === 'sincos') {
+      // Gambar celah PPR
+      for (let i = 0; i < PPR; i++) {
+        const startAngle = (i * 2 * Math.PI) / PPR;
+        const endAngle = startAngle + Math.PI / PPR;
+        dCtx.beginPath();
+        dCtx.arc(0, 0, rOuter - 12, startAngle, endAngle);
+        dCtx.arc(0, 0, rOuter - 38, endAngle, startAngle, true);
+        dCtx.closePath();
+        dCtx.fillStyle = mode === 'sincos' ? '#38bdf8' : '#e2e8f0';
+        dCtx.fill();
+      }
+      // Celah Index Z
+      dCtx.beginPath();
+      dCtx.arc(0, 0, rOuter - 48, 0, (12 * Math.PI) / 180);
+      dCtx.arc(0, 0, rOuter - 65, (12 * Math.PI) / 180, 0, true);
+      dCtx.closePath();
+      dCtx.fillStyle = '#ef4444';
+      dCtx.fill();
+    } else {
+      // Piringan Absolute 4-Bit Gray Code
+      const tracks = 4;
+      for (let s = 0; s < 16; s++) {
+        const gray = s ^ (s >> 1);
+        const a0 = (s * 2 * Math.PI) / 16;
+        const a1 = ((s + 1) * 2 * Math.PI) / 16;
+        for (let b = 0; b < tracks; b++) {
+          const bit = (gray >> (3 - b)) & 1;
+          const r1 = rOuter - 8 - b * 20;
+          const r2 = r1 - 16;
+          dCtx.beginPath();
+          dCtx.arc(0, 0, r1, a0, a1);
+          dCtx.arc(0, 0, r2, a1, a0, true);
+          dCtx.closePath();
+          dCtx.fillStyle = bit ? '#38bdf8' : '#0f172a';
+          dCtx.fill();
+        }
+      }
+    }
+
+    // Poros Tengah Motor
+    dCtx.beginPath();
+    dCtx.arc(0, 0, 22, 0, Math.PI * 2);
+    dCtx.fillStyle = '#64748b';
+    dCtx.fill();
+    dCtx.restore();
+
+    // Indikator Sensor Pembaca Statis (di bagian atas)
+    dCtx.fillStyle = '#f43f5e';
+    dCtx.fillRect(cx - 3, cy - rOuter - 6, 6, 18);
+  }
+
+  function formatBits(num) {
+    let html = '';
+    for (let i = 3; i >= 0; i--) {
+      const bit = (num >> i) & 1;
+      html += `<span class="bit-box ${bit ? 'bit-1' : 'bit-0'}">${bit}</span>`;
+    }
+    return html;
+  }
+
+  function drawScope() {
+    sCtx.clearRect(0, 0, scopeCanvas.width, scopeCanvas.height);
+    const w = scopeCanvas.width;
+    const h = scopeCanvas.height;
+    const mode = modeSelect.value;
+    const latest = getSignals(angle);
+
+    // Garis Grid
+    sCtx.strokeStyle = '#1e293b';
+    sCtx.lineWidth = 1;
+    for (let y = 40; y < h; y += 40) {
+      sCtx.beginPath(); sCtx.moveTo(0, y); sCtx.lineTo(w, y); sCtx.stroke();
+    }
+
+    if (mode === 'incremental') {
+      // Gambar Gelombang Kotak A, B, Z
+      const drawSquare = (key, yBase, color, label) => {
+        sCtx.fillStyle = color;
+        sCtx.font = 'bold 12px sans-serif';
+        sCtx.fillText(label, 10, yBase - 35);
+
+        sCtx.beginPath();
+        sCtx.strokeStyle = color;
+        sCtx.lineWidth = 2.5;
+        for (let i = 0; i < history.length; i++) {
+          const x = 90 + i * 1.8;
+          const y = yBase - history[i][key] * 35;
+          if (i === 0) sCtx.moveTo(x, y);
+          else {
+            const prevY = yBase - history[i - 1][key] * 35;
+            sCtx.lineTo(x, prevY);
+            sCtx.lineTo(x, y);
+          }
+        }
+        sCtx.stroke();
+      };
+
+      drawSquare('chA', 75, '#22c55e', 'Channel A');
+      drawSquare('chB', 165, '#f59e0b', 'Channel B (90°)');
+      drawSquare('chZ', 255, '#ef4444', 'Channel Z (Index)');
+
+      dataReadout.innerHTML = `
+        <span>Ch A: <strong style="color:#22c55e">${latest.chA}</strong> | 
+              Ch B: <strong style="color:#f59e0b">${latest.chB}</strong> | 
+              Ch Z: <strong style="color:#ef4444">${latest.chZ}</strong></span>
+        <span>Quadrature (A & B)</span>
+      `;
+    } else if (mode === 'sincos') {
+      // Gambar Gelombang Analog Sin & Cos
+      const drawWave = (key, yMid, color, label) => {
+        sCtx.fillStyle = color;
+        sCtx.font = 'bold 12px sans-serif';
+        sCtx.fillText(label, 10, yMid - 45);
+
+        sCtx.beginPath();
+        sCtx.strokeStyle = color;
+        sCtx.lineWidth = 2.5;
+        for (let i = 0; i < history.length; i++) {
+          const x = 90 + i * 1.8;
+          const y = yMid - history[i][key] * 40;
+          if (i === 0) sCtx.moveTo(x, y);
+          else sCtx.lineTo(x, y);
+        }
+        sCtx.stroke();
+      };
+
+      drawWave('sinVal', 85, '#38bdf8', 'Sin(θ) Analog');
+      drawWave('cosVal', 205, '#c084fc', 'Cos(θ) Analog');
+
+      const interpSubStep = Math.round((( Math.atan2(latest.sinVal, latest.cosVal) + Math.PI ) / (2 * Math.PI)) * 1024);
+      dataReadout.innerHTML = `
+        <span>Sin: <strong>${latest.sinVal.toFixed(2)} V</strong> | Cos: <strong>${latest.cosVal.toFixed(2)} V</strong></span>
+        <span>Interpolasi Halus: <strong>Titik ke-${interpSubStep} / 1024</strong> per gelombang</span>
+      `;
+    } else {
+      // Gambar Perbandingan Absolute Binary vs Gray Code
+      sCtx.fillStyle = '#e2e8f0';
+      sCtx.font = 'bold 14px sans-serif';
+      sCtx.fillText(`Sektor Sudut Saat Ini: Sektor #${latest.sector} (dari 0 - 15)`, 20, 45);
+
+      sCtx.font = '13px sans-serif';
+      sCtx.fillStyle = '#94a3b8';
+      sCtx.fillText('Perhatikan saat berganti sektor: Gray Code hanya mengubah 1 bit dalam satu waktu!', 20, 75);
+
+      // Visualisasi trek 4-bit sepanjang history
+      for (let b = 0; b < 4; b++) {
+        const yBase = 125 + b * 38;
+        sCtx.fillStyle = '#38bdf8';
+        sCtx.fillText(`Bit G${3 - b}`, 20, yBase - 5);
+
+        sCtx.beginPath();
+        sCtx.strokeStyle = '#38bdf8';
+        sCtx.lineWidth = 2;
+        for (let i = 0; i < history.length; i++) {
+          const bit = (history[i].gray >> (3 - b)) & 1;
+          const x = 90 + i * 1.8;
+          const y = yBase - bit * 18;
+          if (i === 0) sCtx.moveTo(x, y);
+          else {
+            const prevBit = (history[i - 1].gray >> (3 - b)) & 1;
+            sCtx.lineTo(x, yBase - prevBit * 18);
+            sCtx.lineTo(x, y);
+          }
+        }
+        sCtx.stroke();
+      }
+
+      dataReadout.innerHTML = `
+        <span>Gray Code: ${formatBits(latest.gray)}</span>
+        <span>Biner Standar: ${formatBits(latest.sector)}</span>
+      `;
+    }
+  }
+
+  function animate() {
+    if (rpm !== 0) {
+      // Update sudut berdasarkan RPM
+      angle = (angle + (rpm * 360) / (60 * 60)) % 360;
+      if (angle < 0) angle += 360;
+      angleRange.value = Math.round(angle);
+      angleVal.textContent = Math.round(angle);
+      pushSignalState();
+    }
+    degText.textContent = angle.toFixed(1) + '°';
+    drawDisc();
+    drawScope();
+    requestAnimationFrame(animate);
+  }
+
+  // Inisialisasi awal
+  pushSignalState();
+  animate();
+</script>
+
+</body>
+</html>

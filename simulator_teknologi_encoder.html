@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulator Teknologi Sensor Encoder</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --card: #090d16;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --raw: #c084fc;
+      --dig: #22c55e;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body {
+      margin: 0; padding: 20px;
+      background: var(--bg); color: var(--text);
+      display: flex; justify-content: center;
+    }
+    .container {
+      max-width: 1000px; width: 100%;
+      background: var(--panel); border-radius: 12px;
+      padding: 20px; border: 1px solid #334155;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+    h2 { margin-top: 0; font-size: 1.3rem; color: var(--accent); }
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+    @media (max-width: 700px) { .tabs { grid-template-columns: repeat(2, 1fr); } }
+    .tab {
+      padding: 10px 8px; border-radius: 8px; border: 1px solid #475569;
+      background: #0f172a; color: #cbd5e1; font-weight: 700; font-size: 0.9rem;
+      cursor: pointer; transition: 0.15s;
+    }
+    .tab:hover { background: #334155; }
+    .tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+
+    .controls {
+      display: grid; grid-template-columns: 1.2fr 2fr;
+      gap: 15px; background: #0f172a; padding: 14px; border-radius: 8px;
+      margin-bottom: 16px; align-items: center;
+    }
+    @media (max-width: 760px) { .controls { grid-template-columns: 1fr; } }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+    input[type="range"] { width: 100%; }
+    .dist-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    @media (max-width: 760px) { .dist-row { grid-template-columns: repeat(2, 1fr); } }
+    .dist {
+      padding: 8px 6px; border-radius: 6px; border: 1px solid #475569;
+      background: #1e293b; color: #e2e8f0; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; text-align: center; line-height: 1.25;
+    }
+    .dist.on { border-color: var(--warn); background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+
+    .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    @media (max-width: 760px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
+    .metric-card { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 10px; text-align: center; }
+    .metric-title { font-size: 0.74rem; color: var(--muted); text-transform: uppercase; }
+    .metric-value { font-size: 1.35rem; font-weight: bold; margin-top: 4px; color: var(--accent); }
+    .metric-sub { font-size: 0.74rem; color: #64748b; margin-top: 2px; }
+
+    .main-grid { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+    @media (max-width: 820px) { .main-grid { grid-template-columns: 1fr; } }
+    .canvas-box {
+      background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 10px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    canvas { max-width: 100%; border-radius: 6px; }
+    .caption { font-size: 0.78rem; color: var(--muted); margin-top: 6px; text-align: center; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    @media (max-width: 760px) { .info-grid { grid-template-columns: 1fr; } }
+    .info-box {
+      padding: 12px 14px; background: #0f172a; border-left: 4px solid var(--accent);
+      border-radius: 6px; font-size: 0.9rem; line-height: 1.55; color: #e2e8f0;
+    }
+    .info-box h3 { margin: 0 0 6px; font-size: 0.95rem; color: var(--accent); }
+    .info-box.analogi { border-left-color: var(--warn); }
+    .info-box.analogi h3 { color: #fbbf24; }
+    .plus { color: #4ade80; font-weight: 700; }
+    .minus { color: #f87171; font-weight: 700; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.85rem; }
+    th, td { border: 1px solid #334155; padding: 7px 9px; text-align: center; }
+    th { background: #0f172a; color: var(--accent); }
+    td:first-child, th:first-child { text-align: left; }
+    tr.sel td { background: rgba(56, 189, 248, 0.12); }
+    .good { color: #4ade80; } .mid { color: #fbbf24; } .bad { color: #f87171; }
+    .table-wrap { overflow-x: auto; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Simulator Teknologi Sensor Encoder: Optical, Magnetic, Capacitive, Inductive</h2>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tech="optical">1. Optical</button>
+    <button class="tab" data-tech="magnetic">2. Magnetic</button>
+    <button class="tab" data-tech="capacitive">3. Capacitive</button>
+    <button class="tab" data-tech="inductive">4. Inductive</button>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label for="speed">Kecepatan putar (<span id="speedVal">12</span> RPM):</label>
+      <input type="range" id="speed" min="0" max="30" value="12">
+    </div>
+    <div class="control-group">
+      <label>Beri gangguan lingkungan (klik untuk menyalakan/mematikan):</label>
+      <div class="dist-row">
+        <button class="dist" data-dist="dust">Debu &amp; uap oli</button>
+        <button class="dist" data-dist="magnet">Medan magnet luar</button>
+        <button class="dist" data-dist="liquid">Cairan konduktif</button>
+        <button class="dist" data-dist="vibration">Getaran / guncangan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="metric-card">
+      <div class="metric-title">Sinyal mentah sensor</div>
+      <div class="metric-value" id="rawVal" style="color:var(--raw)">0.00</div>
+      <div class="metric-sub" id="rawUnit">Intensitas cahaya</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Keluaran digital</div>
+      <div class="metric-value" id="digVal" style="color:var(--dig)">LOW</div>
+      <div class="metric-sub">Setelah komparator</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Pulsa seharusnya / terbaca</div>
+      <div class="metric-value" id="countVal">0 / 0</div>
+      <div class="metric-sub">Dihitung sejak gangguan diubah</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Status pembacaan</div>
+      <div class="metric-value" id="statusVal" style="font-size:1.05rem; margin-top:8px;">AMAN</div>
+      <div class="metric-sub" id="statusSub">Pulsa sesuai</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="canvas-box">
+      <canvas id="disc" width="280" height="300"></canvas>
+      <div class="caption" id="discCaption"></div>
+    </div>
+    <div class="canvas-box">
+      <canvas id="scope" width="640" height="300"></canvas>
+      <div class="caption">Atas: sinyal mentah dari elemen sensor. Garis putus-putus: ambang komparator. Bawah: pulsa digital yang dikirim ke kontroler.</div>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-box" id="principle"></div>
+    <div class="info-box analogi" id="analogy"></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Teknologi</th><th>Resolusi</th><th>Debu &amp; oli</th><th>Medan magnet</th><th>Cairan</th><th>Getaran</th><th>Biaya</th></tr>
+      </thead>
+      <tbody id="cmpBody">
+        <tr data-tech="optical"><td>Optical</td><td class="good">Sangat tinggi</td><td class="bad">Rentan</td><td class="good">Tahan</td><td class="bad">Rentan</td><td class="mid">Piringan kaca bisa retak</td><td class="mid">Sedang</td></tr>
+        <tr data-tech="magnetic"><td>Magnetic</td><td class="mid">Sedang–tinggi</td><td class="good">Tahan</td><td class="bad">Rentan</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="good">Murah</td></tr>
+        <tr data-tech="capacitive"><td>Capacitive</td><td class="good">Tinggi, dapat diprogram</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="bad">Rentan bila housing terbuka</td><td class="good">Tahan</td><td class="mid">Sedang</td></tr>
+        <tr data-tech="inductive"><td>Inductive</td><td class="good">Tinggi</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="bad">Mahal</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const disc = document.getElementById('disc');
+  const dCtx = disc.getContext('2d');
+  const scope = document.getElementById('scope');
+  const sCtx = scope.getContext('2d');
+
+  const N = 8;                 // jumlah segmen pola per putaran
+  const THRESH = { optical: 0.5, magnetic: 0, capacitive: 0.5, inductive: 0.5 };
+  const RAW_RANGE = { optical: [0, 1], magnetic: [-1.4, 2.4], capacitive: [0, 1], inductive: [0, 1] };
+  const RAW_UNIT = {
+    optical: 'Intensitas cahaya (0–1)',
+    magnetic: 'Medan magnet B (ternormalisasi)',
+    capacitive: 'Kapasitansi (ternormalisasi)',
+    inductive: 'Kopling induktif (ternormalisasi)'
+  };
+
+  const INFO = {
+    optical: {
+      caption: 'LED di atas piringan, photodiode di bawahnya. Berkas cahaya tampak saat celah lewat.',
+      principle: '<h3>Prinsip kerja</h3>Cahaya LED ditembakkan melewati piringan bercelah (code disc) menuju photodiode. Saat celah lewat, cahaya diterima (HIGH); saat bagian gelap lewat, cahaya terhalang (LOW).<br><span class="plus">Kelebihan:</span> resolusi paling tinggi, tidak terpengaruh magnet.<br><span class="minus">Kelemahan:</span> debu, uap oli, embun, dan guncangan. Coba nyalakan <em>Debu &amp; uap oli</em>: cahaya melemah sampai di bawah ambang sehingga pulsa hilang.',
+      analogy: '<h3>Analogi</h3>Menyorotkan senter menembus kipas angin yang berputar ke arah dinding. Setiap bilah yang lewat menghalangi cahaya, sehingga dinding berkedip terang–gelap. Kalau kaca senter tertutup debu, kedipannya makin redup dan sulit dihitung.'
+    },
+    magnetic: {
+      caption: 'Cincin magnet N (merah) dan S (biru) berputar di bawah chip sensor Hall.',
+      principle: '<h3>Prinsip kerja</h3>Cincin magnet dengan kutub utara–selatan bergantian berputar di dekat sensor Hall-effect atau magnetoresistive. Sensor membaca arah medan: positif saat kutub N lewat, negatif saat kutub S lewat.<br><span class="plus">Kelebihan:</span> tahan debu, oli, air, dan getaran.<br><span class="minus">Kelemahan:</span> resolusi di bawah optik dan terganggu medan magnet luar. Coba nyalakan <em>Medan magnet luar</em>: kurva bergeser sehingga sensor terus membaca HIGH sehingga pulsa hilang.',
+      analogy: '<h3>Analogi</h3>Jarum kompas yang bergoyang setiap kali magnet kulkas digerakkan bergantian di dekatnya. Debu tidak menghalangi, tetapi magnet besar di dekat kompas membuat jarum menunjuk arah yang salah.'
+    },
+    capacitive: {
+      caption: 'Elektroda pemancar (TX) dan penerima (RX) di atas piringan berpola tembaga.',
+      principle: '<h3>Prinsip kerja</h3>Pola elektroda pada piringan mengubah kapasitansi antara pelat pemancar (TX) dan penerima (RX) saat berputar. Rangkaian elektronik membaca perubahan muatan itu menjadi posisi.<br><span class="plus">Kelebihan:</span> tahan debu, oli, dan magnet; hemat daya; resolusi dapat diprogram.<br><span class="minus">Kelemahan:</span> cairan konduktif di antara elektroda bila housing terbuka. Coba nyalakan <em>Cairan konduktif</em>.',
+      analogy: '<h3>Analogi</h3>Layar sentuh ponsel yang mengetahui posisi jari dari perubahan muatan listrik, bukan dari tekanan. Layar yang basah oleh air juga sering salah membaca sentuhan.'
+    },
+    inductive: {
+      caption: 'Kumparan tercetak pada PCB di atas target logam bergerigi yang berputar.',
+      principle: '<h3>Prinsip kerja</h3>Kumparan pemancar pada PCB membangkitkan medan bolak-balik. Gerigi logam pada rotor menimbulkan arus pusar (eddy current) yang mengubah kopling ke kumparan penerima, sehingga amplitudo sinyal mengikuti posisi rotor.<br><span class="plus">Kelebihan:</span> akurasi tinggi dan tahan debu, oli, cairan, magnet, serta getaran.<br><span class="minus">Kelemahan:</span> komponen dan pengolah sinyalnya lebih mahal. Coba nyalakan semua gangguan: sinyal tetap terbaca.',
+      analogy: '<h3>Analogi</h3>Detektor logam di bandara: kumparan merasakan benda logam yang lewat melalui perubahan medan induksi, walaupun benda itu tertutup kotoran atau basah.'
+    }
+  };
+
+  let tech = 'optical';
+  let rpm = 12;
+  let angle = 0;
+  const dist = { dust: false, magnet: false, liquid: false, vibration: false };
+  const history = [];
+  const maxHistory = 300;
+  let prevDig = 0, prevIdeal = 0, countIdeal = 0, countRead = 0;
+  let liquidGlitch = 0;
+
+  // ---- kontrol ---------------------------------------------------------
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('.tab');
+    if (!b) return;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === b));
+    tech = b.dataset.tech;
+    resetCounters();
+    updateInfo();
+  });
+  document.querySelectorAll('.dist').forEach(b => b.addEventListener('click', () => {
+    dist[b.dataset.dist] = !dist[b.dataset.dist];
+    b.classList.toggle('on', dist[b.dataset.dist]);
+    resetCounters();
+  }));
+  document.getElementById('speed').addEventListener('input', (e) => {
+    rpm = parseFloat(e.target.value);
+    document.getElementById('speedVal').textContent = rpm;
+  });
+
+  function resetCounters() {
+    history.length = 0;
+    countIdeal = 0; countRead = 0;
+    prevDig = 0; prevIdeal = 0;
+  }
+
+  function updateInfo() {
+    document.getElementById('principle').innerHTML = INFO[tech].principle;
+    document.getElementById('analogy').innerHTML = INFO[tech].analogy;
+    document.getElementById('discCaption').textContent = INFO[tech].caption;
+    document.getElementById('rawUnit').textContent = RAW_UNIT[tech];
+    document.querySelectorAll('#cmpBody tr').forEach(r => r.classList.toggle('sel', r.dataset.tech === tech));
+  }
+
+  // ---- model sinyal ----------------------------------------------------
+  // Sensor diam di posisi atas (−90°). Sudut pola yang berada di bawah sensor:
+  function patternAngle() { return (-Math.PI / 2) - (angle * Math.PI / 180); }
+  function pattern() { return Math.sin(N * patternAngle()); }
+  function noise(a) { return (Math.random() * 2 - 1) * a; }
+
+  function rawSignal() {
+    const p = pattern();
+    const vib = dist.vibration;
+    if (tech === 'optical') {
+      let v = 0.5 + 0.5 * Math.tanh(5 * p);           // cahaya melewati celah
+      if (dist.dust) v = v * 0.42 + noise(0.06);        // cahaya teredam debu
+      if (dist.liquid) v = v * 0.75 + noise(0.05);      // embun menghamburkan cahaya
+      if (vib) {                                        // piringan bergetar
+        v += noise(0.12);
+        if (Math.random() < 0.006) v = 1 - v;           // celah sesaat bergeser dari berkas
+      }
+      return v;
+    }
+    if (tech === 'magnetic') {
+      let v = p;
+      if (dist.magnet) v += 1.15;                       // medan luar menggeser kurva
+      if (vib) v += noise(0.06);
+      return v;
+    }
+    if (tech === 'capacitive') {
+      let v = 0.5 + 0.4 * p;
+      if (dist.liquid) {
+        if (Math.random() < 0.04) liquidGlitch = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.3);
+        liquidGlitch *= 0.93;
+        v += liquidGlitch + noise(0.12);
+      }
+      if (vib) v += noise(0.04);
+      return v;
+    }
+    // inductive
+    let v = 0.5 + 0.4 * p;
+    if (vib) v += noise(0.03);
+    if (dist.dust || dist.liquid || dist.magnet) v += noise(0.02);
+    return v;
+  }
+
+  function step() {
+    if (rpm > 0) angle = (angle + rpm * 360 / 3600) % 360;
+    const raw = rawSignal();
+    // Komparator dengan histeresis kecil
+    const th = THRESH[tech];
+    const h = (tech === 'magnetic') ? 0.08 : 0.04;
+    let dig = prevDig;
+    if (raw > th + h) dig = 1;
+    else if (raw < th - h) dig = 0;
+    const ideal = pattern() > 0 ? 1 : 0;
+    if (rpm > 0) {
+      if (ideal === 1 && prevIdeal === 0) countIdeal++;
+      if (dig === 1 && prevDig === 0) countRead++;
+      history.push({ raw, dig });
+      if (history.length > maxHistory) history.shift();
+    }
+    prevIdeal = ideal; prevDig = dig;
+    updateMetrics(raw, dig);
+  }
+
+  function updateMetrics(raw, dig) {
+    document.getElementById('rawVal').textContent = raw.toFixed(2);
+    const dv = document.getElementById('digVal');
+    dv.textContent = dig ? 'HIGH' : 'LOW';
+    dv.style.color = dig ? '#22c55e' : '#38bdf8';
+    document.getElementById('countVal').textContent = `${countIdeal} / ${countRead}`;
+    const diff = countRead - countIdeal;
+    const st = document.getElementById('statusVal');
+    const sub = document.getElementById('statusSub');
+    if (Math.abs(diff) <= 1) {
+      st.textContent = 'AMAN'; st.style.color = '#4ade80'; sub.textContent = 'Pulsa sesuai';
+    } else if (diff < 0) {
+      st.textContent = 'PULSA HILANG'; st.style.color = '#f87171'; sub.textContent = `${-diff} pulsa tidak terbaca`;
+    } else {
+      st.textContent = 'PULSA PALSU'; st.style.color = '#fbbf24'; sub.textContent = `${diff} pulsa berlebih`;
+    }
+  }
+
+  // ---- gambar piringan --------------------------------------------------
+  function drawDisc() {
+    const w = disc.width, h = disc.height;
+    dCtx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2 + 18, R = 112;
+    dCtx.save();
+    dCtx.translate(cx, cy);
+    dCtx.rotate(angle * Math.PI / 180);
+
+    if (tech === 'optical') {
+      dCtx.beginPath(); dCtx.arc(0, 0, R, 0, Math.PI * 2);
+      dCtx.fillStyle = '#334155'; dCtx.fill();
+      for (let k = 0; k < N; k++) {
+        const a0 = 2 * Math.PI * k / N, a1 = a0 + Math.PI / N;
+        dCtx.beginPath();
+        dCtx.arc(0, 0, R - 8, a0, a1);
+        dCtx.arc(0, 0, R - 36, a1, a0, true);
+        dCtx.closePath();
+        dCtx.fillStyle = '#e2e8f0'; dCtx.fill();
+      }
+      if (dist.dust) {
+        dCtx.fillStyle = 'rgba(146, 64, 14, 0.75)';
+        for (let k = 0; k < 70; k++) {
+          const a = (k * 2.39996) % (2 * Math.PI), r = 40 + (k * 37) % 70;
+          dCtx.beginPath(); dCtx.arc(r * Math.cos(a), r * Math.sin(a), 2 + (k % 3), 0, Math.PI * 2); dCtx.fill();
+        }
+      }
+    } else if (tech === 'magnetic') {
+      for (let k = 0; k < 2 * N; k++) {
+        const a0 = Math.PI * k / N, a1 = a0 + Math.PI / N;
+        dCtx.beginPath();
+        dCtx.arc(0, 0, R, a0, a1);
+        dCtx.arc(0, 0, R - 34, a1, a0, true);
+        dCtx.closePath();
+        dCtx.fillStyle = k % 2 === 0 ? '#dc2626' : '#2563eb';
+        dCtx.fill();
+        dCtx.strokeStyle = '#0f172a'; dCtx.lineWidth = 1; dCtx.stroke();
+        const am = (a0 + a1) / 2;
+        dCtx.save();
+        dCtx.translate((R - 17) * Math.cos(am), (R - 17) * Math.sin(am));
+        dCtx.rotate(am + Math.PI / 2);
+        dCtx.fillStyle = 'white'; dCtx.font = 'bold 12px sans-serif'; dCtx.textAlign = 'center';
+        dCtx.fillText(k % 2 === 0 ? 'N' : 'S', 0, 4);
+        dCtx.restore();
+      }
+      dCtx.beginPath(); dCtx.arc(0, 0, R - 34, 0, Math.PI * 2);
+      dCtx.fillStyle = '#1e293b'; dCtx.fill();
+    } else if (tech === 'capacitive') {
+      dCtx.beginPath(); dCtx.arc(0, 0, R, 0, Math.PI * 2);
+      dCtx.fillStyle = '#14532d'; dCtx.fill();
+      dCtx.beginPath();
+      for (let i = 0; i <= 360; i++) {
+        const a = i * Math.PI / 180;
+        const r = R - 24 + 14 * Math.sin(N * a);
+        if (i === 0) dCtx.moveTo(r * Math.cos(a), r * Math.sin(a));
+        else dCtx.lineTo(r * Math.cos(a), r * Math.sin(a));
+      }
+      for (let i = 360; i >= 0; i--) {
+        const a = i * Math.PI / 180;
+        dCtx.lineTo((R - 52) * Math.cos(a), (R - 52) * Math.sin(a));
+      }
+      dCtx.closePath();
+      dCtx.fillStyle = '#d97706'; dCtx.fill();
+    } else {
+      dCtx.beginPath();
+      for (let i = 0; i <= 720; i++) {
+        const a = i * Math.PI / 360;
+        const r = Math.sin(N * a) > 0 ? R : R - 26;
+        if (i === 0) dCtx.moveTo(r * Math.cos(a), r * Math.sin(a));
+        else dCtx.lineTo(r * Math.cos(a), r * Math.sin(a));
+      }
+      dCtx.closePath();
+      const g = dCtx.createRadialGradient(0, 0, 20, 0, 0, R);
+      g.addColorStop(0, '#94a3b8'); g.addColorStop(1, '#cbd5e1');
+      dCtx.fillStyle = g; dCtx.fill();
+    }
+
+    // poros
+    dCtx.beginPath(); dCtx.arc(0, 0, 18, 0, Math.PI * 2);
+    dCtx.fillStyle = '#64748b'; dCtx.fill();
+    dCtx.strokeStyle = '#38bdf8'; dCtx.lineWidth = 3;
+    dCtx.beginPath(); dCtx.moveTo(0, 0); dCtx.lineTo(0, -16); dCtx.stroke();
+    dCtx.restore();
+
+    if (dist.liquid) {
+      dCtx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      [[cx - 40, cy - R + 20, 10], [cx + 30, cy - R + 30, 8], [cx - 5, cy - R + 8, 7]].forEach(([x, y, r]) => {
+        dCtx.beginPath(); dCtx.arc(x, y, r, 0, Math.PI * 2); dCtx.fill();
+      });
+    }
+
+    drawSensorHead(cx, cy, R);
+
+    if (dist.magnet) {
+      dCtx.fillStyle = '#dc2626'; dCtx.fillRect(w - 46, 14, 34, 22);
+      dCtx.fillStyle = '#2563eb'; dCtx.fillRect(w - 46, 36, 34, 22);
+      dCtx.fillStyle = 'white'; dCtx.font = 'bold 11px sans-serif';
+      dCtx.fillText('N', w - 33, 30); dCtx.fillText('S', w - 33, 52);
+      dCtx.strokeStyle = 'rgba(248, 113, 113, 0.7)'; dCtx.setLineDash([4, 4]); dCtx.lineWidth = 1.5;
+      dCtx.beginPath(); dCtx.moveTo(w - 46, 36); dCtx.quadraticCurveTo(cx + 40, 20, cx + 12, 40); dCtx.stroke();
+      dCtx.setLineDash([]);
+    }
+    if (dist.vibration) {
+      dCtx.strokeStyle = '#fbbf24'; dCtx.lineWidth = 2;
+      for (const s of [-1, 1]) {
+        dCtx.beginPath();
+        for (let k = 0; k < 4; k++) dCtx.arc(cx + s * (R + 12), cy, 6 + k * 5, s > 0 ? -0.6 : Math.PI - 0.6, s > 0 ? 0.6 : Math.PI + 0.6);
+        dCtx.stroke();
+      }
+    }
+  }
+
+  function drawSensorHead(cx, cy, R) {
+    const topY = cy - R;
+    dCtx.font = 'bold 11px sans-serif';
+    dCtx.textAlign = 'center';
+    if (tech === 'optical') {
+      const lit = rawSignal() > 0.5;
+      const sx = cx;
+      dCtx.fillStyle = '#facc15';
+      dCtx.beginPath(); dCtx.arc(sx, topY - 18, 8, 0, Math.PI * 2); dCtx.fill();
+      dCtx.fillStyle = '#e2e8f0'; dCtx.textAlign = 'left';
+      dCtx.fillText('LED → celah → photodiode', 10, 16);
+      dCtx.textAlign = 'center';
+      if (pattern() > 0) {
+        dCtx.strokeStyle = dist.dust ? 'rgba(250, 204, 21, 0.35)' : 'rgba(250, 204, 21, 0.9)';
+        dCtx.lineWidth = 6;
+        dCtx.beginPath(); dCtx.moveTo(sx, topY - 10); dCtx.lineTo(sx, topY + 42); dCtx.stroke();
+      }
+      dCtx.fillStyle = lit ? '#22c55e' : '#475569';
+      dCtx.fillRect(sx - 9, topY + 42, 18, 10);
+    } else if (tech === 'magnetic') {
+      const b = pattern();
+      dCtx.fillStyle = '#111827'; dCtx.strokeStyle = '#94a3b8'; dCtx.lineWidth = 1.5;
+      dCtx.fillRect(cx - 14, topY - 30, 28, 18); dCtx.strokeRect(cx - 14, topY - 30, 28, 18);
+      dCtx.fillStyle = '#e2e8f0'; dCtx.fillText('Hall', cx, topY - 17);
+      dCtx.strokeStyle = b > 0 ? '#f87171' : '#60a5fa'; dCtx.lineWidth = 3;
+      const dir = b > 0 ? -1 : 1;
+      dCtx.beginPath(); dCtx.moveTo(cx, topY - 6); dCtx.lineTo(cx, topY + 6 * dir + 2);
+      dCtx.stroke();
+      dCtx.fillStyle = '#e2e8f0'; dCtx.fillText(b > 0 ? 'Medan N' : 'Medan S', cx + 48, topY - 17);
+    } else if (tech === 'capacitive') {
+      dCtx.fillStyle = '#64748b';
+      dCtx.fillRect(cx - 40, topY - 26, 36, 10);
+      dCtx.fillRect(cx + 4, topY - 26, 36, 10);
+      dCtx.fillStyle = '#e2e8f0';
+      dCtx.fillText('TX', cx - 22, topY - 31); dCtx.fillText('RX', cx + 22, topY - 31);
+      dCtx.strokeStyle = 'rgba(56, 189, 248, 0.6)'; dCtx.setLineDash([3, 3]); dCtx.lineWidth = 1.5;
+      for (let k = -2; k <= 2; k++) {
+        dCtx.beginPath(); dCtx.moveTo(cx + k * 8, topY - 16); dCtx.lineTo(cx + k * 8, topY + 22); dCtx.stroke();
+      }
+      dCtx.setLineDash([]);
+    } else {
+      dCtx.strokeStyle = '#f59e0b'; dCtx.lineWidth = 2;
+      for (let k = 0; k < 3; k++) {
+        dCtx.strokeRect(cx - 34 + k * 5, topY - 34 + k * 5, 68 - k * 10, 22 - k * 10);
+      }
+      dCtx.fillStyle = '#e2e8f0'; dCtx.fillText('Kumparan PCB', cx, topY - 40);
+      if (pattern() > 0) {
+        dCtx.strokeStyle = '#38bdf8'; dCtx.lineWidth = 1.5;
+        for (let k = 0; k < 2; k++) {
+          dCtx.beginPath(); dCtx.ellipse(cx, topY + 12, 10 + k * 7, 4 + k * 3, 0, 0, Math.PI * 2); dCtx.stroke();
+        }
+        dCtx.fillStyle = '#7dd3fc'; dCtx.fillText('arus pusar', cx + 56, topY + 16);
+      }
+    }
+  }
+
+  // ---- gambar osiloskop -------------------------------------------------
+  function drawScope() {
+    const w = scope.width, h = scope.height;
+    sCtx.clearRect(0, 0, w, h);
+    const x0 = 70, dx = (w - x0 - 10) / maxHistory;
+    const [lo, hi] = RAW_RANGE[tech];
+    const rawTop = 22, rawBot = 170;
+    const mapRaw = v => rawBot - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * (rawBot - rawTop);
+
+    sCtx.strokeStyle = '#1e293b'; sCtx.lineWidth = 1;
+    for (let y = 20; y < h; y += 40) { sCtx.beginPath(); sCtx.moveTo(x0, y); sCtx.lineTo(w, y); sCtx.stroke(); }
+
+    sCtx.font = 'bold 12px sans-serif';
+    sCtx.fillStyle = '#c084fc'; sCtx.fillText('Sinyal', 10, 90); sCtx.fillText('mentah', 10, 105);
+    sCtx.fillStyle = '#22c55e'; sCtx.fillText('Digital', 10, 245);
+
+    const ty = mapRaw(THRESH[tech]);
+    sCtx.strokeStyle = '#f59e0b'; sCtx.setLineDash([6, 5]); sCtx.lineWidth = 1.5;
+    sCtx.beginPath(); sCtx.moveTo(x0, ty); sCtx.lineTo(w - 10, ty); sCtx.stroke();
+    sCtx.setLineDash([]);
+    sCtx.fillStyle = '#f59e0b'; sCtx.font = '11px sans-serif'; sCtx.fillText('ambang', w - 58, ty - 5);
+
+    sCtx.beginPath(); sCtx.strokeStyle = '#c084fc'; sCtx.lineWidth = 2;
+    history.forEach((s, i) => {
+      const x = x0 + i * dx, y = mapRaw(s.raw);
+      if (i === 0) sCtx.moveTo(x, y); else sCtx.lineTo(x, y);
+    });
+    sCtx.stroke();
+
+    const dHigh = 205, dLow = 275;
+    sCtx.beginPath(); sCtx.strokeStyle = '#22c55e'; sCtx.lineWidth = 2.5;
+    history.forEach((s, i) => {
+      const x = x0 + i * dx, y = s.dig ? dHigh : dLow;
+      if (i === 0) sCtx.moveTo(x, y);
+      else { sCtx.lineTo(x, history[i - 1].dig ? dHigh : dLow); sCtx.lineTo(x, y); }
+    });
+    sCtx.stroke();
+
+    if (rpm === 0) {
+      sCtx.fillStyle = '#94a3b8'; sCtx.font = '13px sans-serif';
+      sCtx.fillText('Motor berhenti. Geser kecepatan untuk memutar piringan.', x0 + 10, 140);
+    }
+  }
+
+  function animate() {
+    step();
+    drawDisc();
+    drawScope();
+    requestAnimationFrame(animate);
+  }
+
+  updateInfo();
+  animate();
+</script>
+</body>
+</html>

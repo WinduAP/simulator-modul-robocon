@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulator Regulasi vs Tracking</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --card: #090d16;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --out: #22c55e;
+      --err: #f59e0b;
+      --dist: #ef4444;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { margin: 0; padding: 20px; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+    .container { max-width: 980px; width: 100%; background: var(--panel); border-radius: 12px; padding: 20px; border: 1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+    h2 { margin-top: 0; font-size: 1.3rem; color: var(--accent); }
+    .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .tab { padding: 11px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; font-weight: 700; cursor: pointer; font-size: 0.92rem; }
+    .tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+    .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; background: #0f172a; padding: 14px; border-radius: 8px; margin-bottom: 14px; align-items: end; }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    .hidden { display: none !important; }
+    label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+    input[type="range"] { width: 100%; }
+    select, button { padding: 9px 12px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: white; font-size: 0.88rem; font-weight: 600; }
+    button { cursor: pointer; }
+    button:hover { background: #334155; }
+    button.on { border-color: var(--dist); color: #f87171; background: rgba(239, 68, 68, 0.15); }
+    .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+    @media (max-width: 760px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
+    .metric-card { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 10px; text-align: center; }
+    .metric-title { font-size: 0.74rem; color: var(--muted); text-transform: uppercase; }
+    .metric-value { font-size: 1.35rem; font-weight: bold; margin-top: 4px; color: var(--accent); }
+    .metric-sub { font-size: 0.74rem; color: #64748b; margin-top: 2px; }
+    .chart-box { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 10px; }
+    canvas { width: 100%; height: auto; display: block; }
+    .legend { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .info-box { margin-top: 14px; padding: 12px 14px; background: #0f172a; border-left: 4px solid var(--accent); border-radius: 6px; font-size: 0.9rem; line-height: 1.55; color: #e2e8f0; }
+    .info-box.analogi { border-left-color: var(--err); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Simulator Tujuan Sistem Kontrol: Regulasi vs Tracking</h2>
+
+  <div class="tabs">
+    <button class="tab active" data-mode="reg">1. Regulasi: menjaga kecepatan roda tetap</button>
+    <button class="tab" data-mode="trk">2. Tracking: lengan robot mengikuti lintasan</button>
+  </div>
+
+  <div class="controls">
+    <div class="control-group" id="grpDist">
+      <label>Gangguan (tanjakan/beban):</label>
+      <button id="btnDist">Robot mulai menanjak</button>
+    </div>
+    <div class="control-group" id="grpAuto">
+      <label>Gangguan otomatis berkala:</label>
+      <button id="btnAuto">Nyalakan</button>
+    </div>
+    <div class="control-group hidden" id="grpProfile">
+      <label for="profile">Bentuk lintasan set-point:</label>
+      <select id="profile">
+        <option value="sine">Gelombang sinus (ayunan lengan)</option>
+        <option value="step">Tangga (pindah posisi bertahap)</option>
+        <option value="ramp">Segitiga (naik–turun kecepatan tetap)</option>
+      </select>
+    </div>
+    <div class="control-group hidden" id="grpSpeed">
+      <label for="speed">Kecepatan lintasan: <span id="speedVal">1,0</span>×</label>
+      <input type="range" id="speed" min="0.3" max="3" step="0.1" value="1">
+    </div>
+    <div class="control-group">
+      <label for="gain">Kekuatan controller: <span id="gainVal">1,0</span>×</label>
+      <input type="range" id="gain" min="0.3" max="3" step="0.1" value="1">
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="metric-card"><div class="metric-title">Set-point r(t)</div><div class="metric-value" id="mR">–</div><div class="metric-sub" id="mRsub">target</div></div>
+    <div class="metric-card"><div class="metric-title">Keluaran c(t)</div><div class="metric-value" id="mC" style="color:var(--out)">–</div><div class="metric-sub">nilai nyata</div></div>
+    <div class="metric-card"><div class="metric-title">Error e(t)</div><div class="metric-value" id="mE" style="color:var(--err)">–</div><div class="metric-sub">r − c saat ini</div></div>
+    <div class="metric-card"><div class="metric-title">Error terbesar</div><div class="metric-value" id="mMax" style="color:#f87171">–</div><div class="metric-sub">10 detik terakhir</div></div>
+  </div>
+
+  <div class="chart-box">
+    <canvas id="chart" width="920" height="300"></canvas>
+    <div class="legend"><b style="color:#38bdf8">— r(t) set-point</b> &nbsp; <b style="color:#22c55e">— c(t) keluaran</b> &nbsp; <b style="color:#f59e0b">— e(t) error (skala sama, garis tengah = 0)</b> &nbsp; <b style="color:#ef4444">▮ gangguan aktif</b></div>
+  </div>
+
+  <div class="info-box" id="info"></div>
+  <div class="info-box analogi" id="analogy"></div>
+</div>
+
+<script>
+  // Plant orde satu ternormalisasi + controller PI (sama untuk kedua mode).
+  const TAU = 0.5, KPL = 1.5, KP = 0.8, KI = 2.5, DT = 1 / 60, HMAX = 600;
+  const MODES = {
+    reg: { scale: 1000, unit: 'RPM', yMax: 1.5,
+      info: '<b>Regulasi (regulator control):</b> set-point tetap, tetapi gangguan datang dari luar. Tugas controller adalah mengembalikan keluaran ke nilai yang sama setiap kali terganggu. Tekan <em>Robot mulai menanjak</em>: kecepatan turun sesaat, lalu controller menaikkan PWM sampai kembali ke 1000 RPM. Turunkan kekuatan controller untuk melihat pemulihan yang lebih lambat dan penurunan yang lebih dalam.',
+      analogy: '<b>Analogi:</b> sopir yang menjaga mobil tetap 60 km/jam. Jalan menanjak, menurun, atau angin dari depan adalah gangguan; targetnya tidak berubah.' },
+    trk: { scale: 120, unit: '°', yMax: 1.5,
+      info: '<b>Tracking (servo control):</b> set-point terus bergerak dan keluaran harus mengikutinya. Perhatikan c(t) selalu sedikit tertinggal dari r(t). Naikkan kecepatan lintasan: tertinggalnya makin besar. Naikkan kekuatan controller: keluaran mengikuti lebih rapat, tetapi pada lintasan tangga mulai muncul overshoot.',
+      analogy: '<b>Analogi:</b> menggambar dengan mengikuti garis putus-putus di kertas. Tujuannya bukan diam di satu titik, tetapi terus menempel pada garis yang bergerak.' }
+  };
+
+  let mode = 'reg', distOn = false, autoOn = false;
+  let x = 0, integ = 0, t = 0;
+  const hist = [];
+
+  const $ = id => document.getElementById(id);
+  const fmt = v => v.toFixed(1).replace('.', ',');
+
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll('.tab').forEach(o => o.classList.toggle('active', o === b));
+    ['grpDist', 'grpAuto'].forEach(id => $(id).classList.toggle('hidden', mode !== 'reg'));
+    ['grpProfile', 'grpSpeed'].forEach(id => $(id).classList.toggle('hidden', mode !== 'trk'));
+    distOn = false; autoOn = false;
+    $('btnDist').classList.remove('on'); $('btnDist').textContent = 'Robot mulai menanjak';
+    $('btnAuto').classList.remove('on'); $('btnAuto').textContent = 'Nyalakan';
+    x = mode === 'reg' ? 1 : refTrack(0); integ = mode === 'reg' ? 1 / KPL : x / KPL; t = 0; hist.length = 0;
+    $('info').innerHTML = MODES[mode].info;
+    $('analogy').innerHTML = MODES[mode].analogy;
+  }));
+  $('btnDist').addEventListener('click', () => {
+    distOn = !distOn;
+    $('btnDist').classList.toggle('on', distOn);
+    $('btnDist').textContent = distOn ? 'Jalan kembali datar' : 'Robot mulai menanjak';
+  });
+  $('btnAuto').addEventListener('click', () => {
+    autoOn = !autoOn;
+    $('btnAuto').classList.toggle('on', autoOn);
+    $('btnAuto').textContent = autoOn ? 'Matikan' : 'Nyalakan';
+  });
+  $('speed').addEventListener('input', e => $('speedVal').textContent = fmt(+e.target.value));
+  $('gain').addEventListener('input', e => $('gainVal').textContent = fmt(+e.target.value));
+
+  function refTrack(tt) {
+    const p = $('profile').value, s = +$('speed').value, T = 6 / s;
+    const ph = ((tt % T) + T) % T / T;
+    if (p === 'sine') return 0.75 + 0.45 * Math.sin(2 * Math.PI * ph);
+    if (p === 'step') return [0.4, 0.9, 1.25, 0.7][Math.floor(ph * 4)];
+    return ph < 0.5 ? 0.3 + 1.9 * ph : 0.3 + 1.9 * (1 - ph);
+  }
+
+  function step() {
+    const g = +$('gain').value;
+    let r, d = 0;
+    if (mode === 'reg') {
+      r = 1;
+      const autoD = autoOn && (t % 5) > 2.5;
+      d = (distOn || autoD) ? 0.35 : 0;
+    } else {
+      r = refTrack(t);
+    }
+    const e = r - x;
+    integ += KI * g * e * DT;
+    integ = Math.max(0, Math.min(1, integ));
+    const u = Math.max(0, Math.min(1, KP * g * e + integ));
+    x += (KPL * u - x - d) / TAU * DT;
+    t += DT;
+    hist.push({ r, c: x, e, d });
+    if (hist.length > HMAX) hist.shift();
+  }
+
+  const cv = $('chart'), ctx = cv.getContext('2d');
+  function draw() {
+    const M = MODES[mode], w = cv.width, h = cv.height, x0 = 56, y0 = 12, y1 = h - 24;
+    const Y = v => y1 - (v / M.yMax) * (y1 - y0);
+    const Ye = v => (y0 + y1) / 2 - v / M.yMax * (y1 - y0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = '11px sans-serif';
+    for (let k = 0; k <= 6; k++) {
+      const v = M.yMax * k / 6;
+      ctx.strokeStyle = '#1e293b'; ctx.beginPath(); ctx.moveTo(x0, Y(v)); ctx.lineTo(w, Y(v)); ctx.stroke();
+      ctx.fillStyle = '#64748b'; ctx.fillText(`${Math.round(v * M.scale)}${M.unit}`, 2, Y(v) + 4);
+    }
+    const dx = (w - x0) / HMAX;
+    hist.forEach((p, i) => { if (p.d > 0) { ctx.fillStyle = 'rgba(239, 68, 68, 0.12)'; ctx.fillRect(x0 + i * dx, y0, dx + 0.5, y1 - y0); } });
+    ctx.strokeStyle = '#334155'; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x0, Ye(0)); ctx.lineTo(w, Ye(0)); ctx.stroke(); ctx.setLineDash([]);
+    const line = (f, col, wd) => {
+      ctx.beginPath(); ctx.strokeStyle = col; ctx.lineWidth = wd;
+      hist.forEach((p, i) => { const xx = x0 + i * dx, yy = f(p); i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); });
+      ctx.stroke();
+    };
+    line(p => Ye(p.e), '#f59e0b', 1.5);
+    line(p => Y(p.r), '#38bdf8', 2);
+    line(p => Y(p.c), '#22c55e', 2.5);
+  }
+
+  function metrics() {
+    const M = MODES[mode], p = hist[hist.length - 1];
+    if (!p) return;
+    $('mR').textContent = `${Math.round(p.r * M.scale)} ${M.unit}`;
+    $('mC').textContent = `${Math.round(p.c * M.scale)} ${M.unit}`;
+    $('mE').textContent = `${Math.round(p.e * M.scale)} ${M.unit}`;
+    const mx = hist.reduce((a, q) => Math.max(a, Math.abs(q.e)), 0);
+    $('mMax').textContent = `${Math.round(mx * M.scale)} ${M.unit}`;
+    $('mRsub').textContent = mode === 'reg' ? 'tetap' : 'bergerak';
+  }
+
+  function animate() { step(); draw(); metrics(); requestAnimationFrame(animate); }
+  document.querySelector('.tab.active').click();
+  animate();
+</script>
+</body>
+</html>

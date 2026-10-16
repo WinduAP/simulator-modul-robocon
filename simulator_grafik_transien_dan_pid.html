@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulator Parameter Grafik Transien & Metode Tuning PID (Ziegler-Nichols vs Manual)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --card: #090d16;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --purple: #c084fc;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body {
+      margin: 0; padding: 18px;
+      background: var(--bg); color: var(--text);
+      display: flex; justify-content: center;
+    }
+    .container {
+      max-width: 1080px; width: 100%;
+      background: var(--panel); border-radius: 12px;
+      padding: 20px; border: 1px solid #334155;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+    }
+    h2 { margin-top: 0; margin-bottom: 6px; font-size: 1.3rem; color: var(--accent); }
+    .subtitle { margin-top: 0; margin-bottom: 14px; font-size: 0.88rem; color: var(--muted); }
+    .presets {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 14px; background: #0f172a; padding: 12px; border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .presets span { font-size: 0.82rem; color: var(--muted); font-weight: 700; width: 100%; margin-bottom: 2px; }
+    button {
+      padding: 8px 12px; border-radius: 6px; border: 1px solid #475569;
+      background: #1e293b; color: #f8fafc; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: 0.15s;
+    }
+    button:hover { background: #334155; }
+    button.btn-zn { border-color: #f59e0b; color: #fbbf24; }
+    button.btn-crit { border-color: #22c55e; color: #4ade80; }
+    button.btn-osc { border-color: #ef4444; color: #f87171; }
+    button.btn-over { border-color: #38bdf8; color: #7dd3fc; }
+
+    .controls {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px; background: #0f172a; padding: 14px; border-radius: 8px;
+      margin-bottom: 16px; border: 1px solid #334155;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 5px; }
+    label { font-size: 0.82rem; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+    label strong { color: var(--accent); font-family: monospace; font-size: 0.92rem; }
+    input[type="range"], select {
+      padding: 6px; border-radius: 6px; border: 1px solid #475569;
+      background: #1e293b; color: white; font-size: 0.85rem;
+    }
+
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 860px) { .metrics-grid { grid-template-columns: repeat(3, 1fr); } }
+    .m-card {
+      background: var(--card); border: 1px solid #334155;
+      border-radius: 8px; padding: 10px; text-align: center;
+    }
+    .m-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+    .m-val { font-size: 1.25rem; font-weight: bold; margin-top: 4px; color: var(--accent); font-family: monospace; }
+    .m-desc { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+
+    .canvas-wrap {
+      background: var(--card); border: 1px solid #334155;
+      border-radius: 8px; padding: 12px; position: relative;
+    }
+    canvas { width: 100%; border-radius: 6px; display: block; }
+    .notes-box {
+      margin-top: 14px; padding: 13px 16px; background: #0f172a;
+      border-left: 4px solid var(--amber); border-radius: 6px;
+      font-size: 0.88rem; line-height: 1.55; color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Simulator: Analisis Grafik Step Response & Metode Tuning PID</h2>
+  <p class="subtitle">Amati letak titik <strong>td, tr, tp, Mp, ts, ess</strong> secara otomatis serta bandingkan karakter <strong>Ziegler-Nichols Tipe 2 (Kcr = 8.0, Pcr = 1.57 s)</strong> dengan <strong>Tuning Manual Halus</strong>.</p>
+
+  <div class="presets">
+    <span>⚡ Pilih Preset Kurva Redaman (ζ) & Metode Tuning Ziegler-Nichols (Tipe 2 Closed-Loop):</span>
+    <button class="btn-osc" id="btnKcr">1. Cari Kcr (Kp=8.0, Ki=0, Kd=0 → Undamped ζ=0)</button>
+    <button class="btn-zn" id="btnZN_P">2. Z-N Tipe P (Kp=4.0 → Ada Offset ess)</button>
+    <button class="btn-zn" id="btnZN_PI">3. Z-N Tipe PI (Kp=3.6, Ki=2.75)</button>
+    <button class="btn-zn" id="btnZN_PID">4. Z-N Tipe PID Standar (Kp=4.8, Ki=6.1, Kd=0.94 → Overshoot ~25%)</button>
+    <button class="btn-crit" id="btnManual">5. Tuning Manual Ideal / Critically Damped (ζ≈1, Overshoot 0%)</button>
+    <button class="btn-over" id="btnOver">6. Overdamped (ζ>1, Respon Lambat)</button>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Proportional Gain (Kp): <strong id="kpVal">4.80</strong></label>
+      <input type="range" id="kpSlider" min="0.2" max="10.0" step="0.1" value="4.8">
+    </div>
+    <div class="control-group">
+      <label>Integral Gain (Ki): <strong id="kiVal">6.10</strong></label>
+      <input type="range" id="kiSlider" min="0.0" max="12.0" step="0.1" value="6.1">
+    </div>
+    <div class="control-group">
+      <label>Derivative Gain (Kd): <strong id="kdVal">0.94</strong></label>
+      <input type="range" id="kdSlider" min="0.0" max="4.0" step="0.05" value="0.94">
+    </div>
+    <div class="control-group">
+      <label>Struktur Kontroler & Anti-Kick:</label>
+      <select id="structSelect">
+        <option value="pid">Standar PID (Derivatif pada Error e(t))</option>
+        <option value="pid_meas">Struktur PI-D (Derivatif pada Output -dc/dt)</option>
+        <option value="ipd">Struktur I-PD (P & D di Jalur Feedback)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 6 Parameter Kunci Step Response -->
+  <div class="metrics-grid">
+    <div class="m-card">
+      <div class="m-label">Delay Time (td)</div>
+      <div class="m-val" id="tdText">0.00 s</div>
+      <div class="m-desc">Waktu capai 50% target</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Rise Time (tr)</div>
+      <div class="m-val" id="trText">0.00 s</div>
+      <div class="m-desc">Waktu naik (10%-90% / 0-100%)</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Peak Time (tp)</div>
+      <div class="m-val" id="tpText">0.00 s</div>
+      <div class="m-desc">Waktu puncak pertama</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Max Overshoot (Mp)</div>
+      <div class="m-val" id="mpText" style="color:#f59e0b">0.0 %</div>
+      <div class="m-desc">Lonjakan di atas target</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Settling Time (ts)</div>
+      <div class="m-val" id="tsText" style="color:#22c55e">0.00 s</div>
+      <div class="m-desc">Masuk pita toleransi ±2%</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Steady-State Error</div>
+      <div class="m-val" id="essText" style="color:#c084fc">0.0 %</div>
+      <div class="m-desc">Selisih permanen (ess)</div>
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="plotCanvas" width="1020" height="390"></canvas>
+  </div>
+
+  <div class="notes-box" id="noteBox"></div>
+</div>
+
+<script>
+  const canvas = document.getElementById('plotCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const kpSlider = document.getElementById('kpSlider');
+  const kiSlider = document.getElementById('kiSlider');
+  const kdSlider = document.getElementById('kdSlider');
+  const structSelect = document.getElementById('structSelect');
+
+  const kpVal = document.getElementById('kpVal');
+  const kiVal = document.getElementById('kiVal');
+  const kdVal = document.getElementById('kdVal');
+
+  const tdText = document.getElementById('tdText');
+  const trText = document.getElementById('trText');
+  const tpText = document.getElementById('tpText');
+  const mpText = document.getElementById('mpText');
+  const tsText = document.getElementById('tsText');
+  const essText = document.getElementById('essText');
+  const noteBox = document.getElementById('noteBox');
+
+  // Plant orde-3: G(s) = 2 / ((s+1)(s+2)(0.25s+1)) -> memiliki batas kestabilan Kcr = 8.0, Pcr = 1.57 s
+  function simulateResponse(Kp, Ki, Kd, structure) {
+    const dt = 0.005;
+    const Tmax = 8.0;
+    const N = Math.floor(Tmax / dt);
+
+    // State variabel plant orde-3
+    let y = 0, dy = 0, d2y = 0;
+    let integ = 0;
+    let prevErr = 1.0;
+    let prevY = 0.0;
+
+    const r = 1.0; // Unit step target = 1.0
+    const data = [];
+
+    for (let i = 0; i <= N; i++) {
+      const t = i * dt;
+      const e = r - y;
+
+      // Suku Integral dengan anti-windup ringan
+      integ += e * dt;
+      integ = Math.max(-5, Math.min(5, integ));
+
+      let P_term = 0, I_term = Ki * integ, D_term = 0;
+
+      if (structure === 'pid') {
+        P_term = Kp * e;
+        D_term = (i === 0) ? 0 : Kd * ((e - prevErr) / dt);
+      } else if (structure === 'pid_meas') {
+        P_term = Kp * e;
+        D_term = (i === 0) ? 0 : -Kd * ((y - prevY) / dt);
+      } else {
+        // I-PD: P dan D pada measurement y
+        P_term = -Kp * y;
+        D_term = (i === 0) ? 0 : -Kd * ((y - prevY) / dt);
+      }
+
+      const u = P_term + I_term + D_term;
+      prevErr = e;
+      prevY = y;
+
+      // Persamaan diferensial Plant: 0.25*y''' + 1.75*y'' + 3.5*y' + 2*y = 2*u
+      // (Sehingga saat Ki=0, Kd=0, Kp=8.0 -> osilasi murni pada omega = sqrt(14) ≈ 3.74 rad/s, Pcr ≈ 1.68 s)
+      const d3y = (2.0 * u - 2.0 * y - 3.5 * dy - 1.75 * d2y) / 0.25;
+      d2y += d3y * dt;
+      dy += d2y * dt;
+      y += dy * dt;
+
+      data.push({ t, y, u });
+    }
+    return data;
+  }
+
+  function computeMetrics(data) {
+    const r = 1.0;
+    const yFinal = data[data.length - 1].y;
+    const ess = Math.abs(r - yFinal) * 100;
+
+    // Cari td (50% dari nilai akhir)
+    let td = null, t10 = null, t90 = null, t100 = null;
+    let maxY = -Infinity, tp = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const { t, y } = data[i];
+      if (td === null && y >= 0.5 * yFinal) td = t;
+      if (t10 === null && y >= 0.1 * yFinal) t10 = t;
+      if (t90 === null && y >= 0.9 * yFinal) t90 = t;
+      if (t100 === null && y >= yFinal) t100 = t;
+      if (y > maxY) {
+        maxY = y;
+        tp = t;
+      }
+    }
+
+    const Mp = yFinal > 0.05 ? Math.max(0, ((maxY - yFinal) / yFinal) * 100) : 0;
+    const tr = (Mp > 1.0 && t100 !== null) ? t100 : ((t90 !== null && t10 !== null) ? (t90 - t10) : 0);
+
+    // Cari Settling Time ts (pita ±2% dari yFinal)
+    let ts = data[data.length - 1].t;
+    const tol = 0.02 * Math.max(0.5, yFinal);
+    for (let i = data.length - 1; i >= 0; i--) {
+      if (Math.abs(data[i].y - yFinal) > tol) {
+        ts = data[i].t;
+        break;
+      }
+      if (i === 0) ts = 0;
+    }
+
+    return { td: td || 0, tr: tr || 0, tp, maxY, Mp, ts, ess, yFinal };
+  }
+
+  function updateAll() {
+    const Kp = parseFloat(kpSlider.value);
+    const Ki = parseFloat(kiSlider.value);
+    const Kd = parseFloat(kdSlider.value);
+    const structure = structSelect.value;
+
+    kpVal.textContent = Kp.toFixed(2);
+    kiVal.textContent = Ki.toFixed(2);
+    kdVal.textContent = Kd.toFixed(2);
+
+    const data = simulateResponse(Kp, Ki, Kd, structure);
+    const m = computeMetrics(data);
+
+    tdText.textContent = `${m.td.toFixed(2)} s`;
+    trText.textContent = `${m.tr.toFixed(2)} s`;
+    tpText.textContent = m.Mp > 0.5 ? `${m.tp.toFixed(2)} s` : 'Tanpa Puncak';
+    mpText.textContent = `${m.Mp.toFixed(1)} %`;
+    mpText.style.color = m.Mp > 20 ? '#ef4444' : (m.Mp > 2 ? '#f59e0b' : '#22c55e');
+    tsText.textContent = m.ts < 7.8 ? `${m.ts.toFixed(2)} s` : '> 8.0 s (Osilasi)';
+    essText.textContent = `${m.ess.toFixed(1)} %`;
+
+    drawPlot(data, m);
+    updateNote(Kp, Ki, Kd, m);
+  }
+
+  function updateNote(Kp, Ki, Kd, m) {
+    if (Ki === 0 && Kd === 0 && Kp >= 7.8) {
+      noteBox.innerHTML = `
+        <strong>🔍 Kondisi Batas Kestabilan Ziegler-Nichols (Undamped ζ = 0):</strong> Dengan <em>Ki = 0</em> dan <em>Kd = 0</em>, saat <strong>Kp = Kcr = 8.0</strong> sistem berosilasi terus-menerus dengan amplitudo konstan dan periode gelombang <strong>Pcr ≈ 1.68 detik</strong>. Dari dua angka inilah tabel rumus Ziegler-Nichols Tipe 2 dihitung!
+      `;
+    } else if (m.Mp > 18) {
+      noteBox.innerHTML = `
+        <strong>⚠️ Catatan Praktis Tuning Agresif (Overshoot Tinggi = ${m.Mp.toFixed(1)}%):</strong> Perhatikan lonjakan puncak <em>Mp</em> yang melewati garis target 1.0! Rumus Ziegler-Nichols memang dirancang menghasilkan respon cepat dengan <strong>overshoot sekitar 25%</strong>. Pada kontrol kecepatan motor DC (RPM) ini masih aman, tetapi pada <strong>lengan robot (kontrol posisi)</strong>, lonjakan 25% ini berbahaya karena bisa membuat mekanik menabrak batas fisik! Tambahkan <strong>Kd</strong> atau kurangi <strong>Kp/Ki</strong> untuk menghaluskannya.
+      `;
+    } else if (Ki === 0 && m.ess > 5) {
+      noteBox.innerHTML = `
+        <strong>📌 Keterbatasan Kontroler Proporsional Murni (Offset / Steady-State Error = ${m.ess.toFixed(1)}%):</strong> Tanpa aksi Integral (<em>Ki = 0</em>), dorongan kontrol melemah saat mendekati target sehingga tidak sanggup mengalahkan beban alami Plant. Geser naik slider <strong>Ki</strong> sedikit saja untuk melihat bagaimana garis kurva terdorong naik menyentuh Set-Point 1.0!
+      `;
+    } else {
+      noteBox.innerHTML = `
+        <strong>✅ Respon Terkendali Halus (Overshoot = ${m.Mp.toFixed(1)}%, Settling Time ts = ${m.ts.toFixed(2)} s):</strong> Kurva naik dengan cepat menuju Set-Point 1.0, diredam dengan baik oleh aksi Derivatif (<em>Kd</em>), dan dikunci tepat di garis target tanpa sisa error (<em>ess = 0%</em>) berkat aksi Integral (<em>Ki</em>).
+      `;
+    }
+  }
+
+  function drawPlot(data, m) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const w = canvas.width;
+    const h = canvas.height;
+    const padL = 60, padR = 30, padT = 28, padB = 42;
+    const pw = w - padL - padR;
+    const ph = h - padT - padB;
+
+    const maxT = 8.0;
+    const maxY = 1.6;
+    const minY = 0.0;
+
+    const xOf = (t) => padL + (t / maxT) * pw;
+    const yOf = (y) => padT + ph - ((y - minY) / (maxY - minY)) * ph;
+
+    // Grid
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1;
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#64748b';
+
+    for (let yv = 0; yv <= 1.6; yv += 0.2) {
+      const py = yOf(yv);
+      ctx.beginPath(); ctx.moveTo(padL, py); ctx.lineTo(w - padR, py); ctx.stroke();
+      ctx.fillText(yv.toFixed(1), 24, py + 4);
+    }
+    for (let tv = 0; tv <= 8; tv += 1) {
+      const px = xOf(tv);
+      ctx.beginPath(); ctx.moveTo(px, padT); ctx.lineTo(px, h - padB); ctx.stroke();
+      ctx.fillText(`${tv}s`, px - 8, h - 16);
+    }
+
+    // Pita Toleransi Settling Time ±2% di sekitar yFinal
+    const yFin = m.yFinal;
+    const yTopBand = yOf(yFin * 1.02);
+    const yBotBand = yOf(yFin * 0.98);
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.10)';
+    ctx.fillRect(padL, yTopBand, pw, yBotBand - yTopBand);
+
+    // Garis Target Set-Point 1.0
+    const yRef = yOf(1.0);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath(); ctx.moveTo(padL, yRef); ctx.lineTo(w - padR, yRef); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('Target Set-Point r(t) = 1.0', w - 185, yRef - 8);
+
+    // Gambar Kurva Respon c(t)
+    ctx.beginPath();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < data.length; i++) {
+      const px = xOf(data[i].t);
+      const py = yOf(Math.max(0, Math.min(1.65, data[i].y)));
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Penanda Titik td (50%)
+    if (m.td > 0 && m.td < maxT) {
+      const xTd = xOf(m.td);
+      const yTd = yOf(0.5 * yFin);
+      ctx.strokeStyle = '#c084fc';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(xTd, yOf(0)); ctx.lineTo(xTd, yTd); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#c084fc';
+      ctx.beginPath(); ctx.arc(xTd, yTd, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillText(`td (${m.td.toFixed(2)}s)`, xTd + 5, yTd + 14);
+    }
+
+    // Penanda Titik Puncak tp & Mp
+    if (m.Mp > 1.5 && m.tp < maxT) {
+      const xTp = xOf(m.tp);
+      const yTp = yOf(Math.min(1.6, m.maxY));
+      ctx.strokeStyle = '#f59e0b';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(xTp, yOf(0)); ctx.lineTo(xTp, yTp); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.arc(xTp, yTp, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillText(`Puncak tp=${m.tp.toFixed(2)}s (Mp=${m.Mp.toFixed(1)}%)`, xTp - 40, Math.max(18, yTp - 10));
+    }
+
+    // Penanda Titik Settling Time ts
+    if (m.ts > 0.1 && m.ts < 7.8) {
+      const xTs = xOf(m.ts);
+      ctx.strokeStyle = '#22c55e';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(xTs, padT); ctx.lineTo(xTs, h - padB); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillText(`Settling Time ts = ${m.ts.toFixed(2)}s (±2%)`, xTs + 6, padT + 18);
+    }
+
+    // Penanda Steady-State Error ess jika signifikan
+    if (m.ess > 2.0) {
+      const xEnd = w - padR - 90;
+      const yFinPx = yOf(yFin);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(xEnd, yRef); ctx.lineTo(xEnd, yFinPx); ctx.stroke();
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText(`Offset ess = ${m.ess.toFixed(1)}%`, xEnd - 45, (yRef + yFinPx) / 2 + 4);
+    }
+  }
+
+  // Tombol Preset
+  document.getElementById('btnKcr').addEventListener('click', () => {
+    kpSlider.value = 8.0; kiSlider.value = 0.0; kdSlider.value = 0.0;
+    structSelect.value = 'pid'; updateAll();
+  });
+  document.getElementById('btnZN_P').addEventListener('click', () => {
+    kpSlider.value = 4.0; kiSlider.value = 0.0; kdSlider.value = 0.0;
+    structSelect.value = 'pid'; updateAll();
+  });
+  document.getElementById('btnZN_PI').addEventListener('click', () => {
+    kpSlider.value = 3.6; kiSlider.value = 2.6; kdSlider.value = 0.0;
+    structSelect.value = 'pid'; updateAll();
+  });
+  document.getElementById('btnZN_PID').addEventListener('click', () => {
+    kpSlider.value = 4.8; kiSlider.value = 6.1; kdSlider.value = 0.94;
+    structSelect.value = 'pid'; updateAll();
+  });
+  document.getElementById('btnManual').addEventListener('click', () => {
+    kpSlider.value = 3.2; kiSlider.value = 2.8; kdSlider.value = 1.45;
+    structSelect.value = 'pid_meas'; updateAll();
+  });
+  document.getElementById('btnOver').addEventListener('click', () => {
+    kpSlider.value = 1.1; kiSlider.value = 0.7; kdSlider.value = 1.6;
+    structSelect.value = 'pid_meas'; updateAll();
+  });
+
+  kpSlider.addEventListener('input', updateAll);
+  kiSlider.addEventListener('input', updateAll);
+  kdSlider.addEventListener('input', updateAll);
+  structSelect.addEventListener('change', updateAll);
+
+  updateAll();
+</script>
+
+</body>
+</html>
