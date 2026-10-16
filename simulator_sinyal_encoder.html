@@ -3,408 +3,264 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulator Sinyal Rotary Encoder</title>
+  <title>Simulator 3D Sinyal Encoder</title>
   <style>
-    :root {
-      --bg: #0f172a;
-      --panel: #1e293b;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --chA: #22c55e;
-      --chB: #f59e0b;
-      --chZ: #ef4444;
-    }
+    :root { --bg: #0f172a; --panel: #1e293b; --card: #090d16; --text: #f8fafc; --muted: #94a3b8; --accent: #38bdf8; --warn: #f59e0b; }
     * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body {
-      margin: 0; padding: 20px;
-      background: var(--bg); color: var(--text);
-      display: flex; justify-content: center;
-    }
-    .container {
-      max-width: 960px; width: 100%;
-      background: var(--panel); border-radius: 12px;
-      padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-      border: 1px solid #334155;
-    }
-    h2 { margin-top: 0; font-size: 1.3rem; color: var(--accent); }
-    .controls {
-      display: flex; flex-wrap: wrap; gap: 15px;
-      background: #0f172a; padding: 15px; border-radius: 8px;
-      margin-bottom: 20px; align-items: center;
-    }
-    .control-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 180px; }
-    label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
-    select, input[type="range"] {
-      padding: 8px; border-radius: 6px; border: 1px solid #475569;
-      background: #1e293b; color: white; font-size: 0.9rem;
-    }
-    .grid {
-      display: grid; grid-template-columns: 320px 1fr; gap: 20px;
-    }
-    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
-    .canvas-box {
-      background: #090d16; border-radius: 8px; padding: 12px;
-      display: flex; flex-direction: column; align-items: center;
-      border: 1px solid #334155;
-    }
-    canvas { border-radius: 6px; max-width: 100%; }
-    .status-bar {
-      margin-top: 12px; width: 100%; font-size: 0.85rem;
-      background: #1e293b; padding: 10px; border-radius: 6px;
-      display: flex; justify-content: space-between;
-    }
-    .badge {
-      padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;
-    }
-    .cw { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
-    .ccw { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    .stop { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
-    .bit-box {
-      display: inline-block; width: 22px; height: 22px; line-height: 22px;
-      text-align: center; border-radius: 4px; margin-right: 3px;
-      font-family: monospace; font-weight: bold;
-    }
-    .bit-1 { background: #38bdf8; color: #0f172a; }
-    .bit-0 { background: #334155; color: #94a3b8; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+    .container { max-width: 1180px; width: 100%; background: var(--panel); border-radius: 12px; padding: 18px; border: 1px solid #334155; }
+    h2 { margin: 0 0 4px; font-size: 1.3rem; color: var(--accent); }
+    .sub { color: var(--muted); font-size: 0.88rem; margin: 0 0 12px; }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .tab { padding: 9px 6px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; font-weight: 700; font-size: 0.86rem; cursor: pointer; line-height: 1.2; }
+    .tab small { display: block; font-weight: 500; color: #94a3b8; font-size: 0.72rem; margin-top: 2px; }
+    .tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
+    .tab.active small { color: #0f172a; }
+    .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 12px; align-items: center; }
+    @media (max-width: 900px) { .controls { grid-template-columns: 1fr 1fr; } }
+    .cg { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+    input[type="range"] { width: 100%; }
+    .btn { padding: 7px 9px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+    .btn.on { border-color: var(--accent); background: rgba(56,189,248,0.15); color: #7dd3fc; }
+    .main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
+    .view3d { position: relative; background: #0b1220; border: 1px solid #334155; border-radius: 8px; height: 430px; overflow: hidden; }
+    .view3d canvas { display: block; width: 100%; height: 100%; }
+    .hint { position: absolute; left: 10px; bottom: 8px; font-size: 0.75rem; color: #64748b; pointer-events: none; }
+    .lbl { position: absolute; transform: translate(-50%, -100%); pointer-events: none; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; background: rgba(15,23,42,0.82); border: 1px solid #475569; border-radius: 5px; padding: 2px 6px; white-space: nowrap; }
+    .lbl::after { content: ''; position: absolute; left: 50%; top: 100%; width: 1px; height: 10px; background: #94a3b8; }
+    .lbl.key { border-color: var(--accent); color: #7dd3fc; }
+    .right { display: flex; flex-direction: column; gap: 10px; }
+    .scope { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 8px; }
+    .scope canvas { width: 100%; height: auto; display: block; }
+    .readout { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; line-height: 1.6; }
+    .readout b { color: #7dd3fc; }
+    .bits { display: inline-flex; gap: 3px; vertical-align: middle; }
+    .bit { width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 4px; font-family: Consolas, monospace; font-weight: 700; }
+    .b1 { background: #38bdf8; color: #0f172a; } .b0 { background: #334155; color: #94a3b8; }
+    .bitc { outline: 2px solid #f59e0b; }
+    .info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    @media (max-width: 760px) { .info { grid-template-columns: 1fr; } }
+    .box { padding: 11px 13px; background: #0f172a; border-left: 4px solid var(--accent); border-radius: 6px; font-size: 0.88rem; line-height: 1.55; color: #e2e8f0; }
+    .box h3 { margin: 0 0 6px; font-size: 0.95rem; color: var(--accent); }
+    .box.alt { border-left-color: var(--warn); } .box.alt h3 { color: #fbbf24; }
+    .err { color: #f87171; padding: 30px; text-align: center; }
   </style>
 </head>
 <body>
-
 <div class="container">
-  <h2>Simulator Interaktif: Cara Kerja & Sinyal Output Encoder</h2>
-  
+  <h2>Simulator 3D: Format Sinyal Encoder</h2>
+  <p class="sub">Piringan dan kepala pembaca ditampilkan dalam 3D. Seret untuk memutar sudut pandang, scroll untuk zoom. Berkas cahaya menyala saat melewati celah, dan grafik di kanan menunjukkan sinyal yang dihasilkan.</p>
+
+  <div class="tabs">
+    <button class="tab active" data-m="inc">Incremental<small>channel A, B, Z</small></button>
+    <button class="tab" data-m="abs">Absolute 4-bit<small>Gray code vs biner</small></button>
+    <button class="tab" data-m="sincos">SinCos<small>sinyal analog sin dan cos</small></button>
+  </div>
+
   <div class="controls">
-    <div class="control-group">
-      <label for="modeSelect">1. Pilih Jenis Sinyal Output:</label>
-      <select id="modeSelect">
-        <option value="incremental">Incremental (Quadrature A, B, Z)</option>
-        <option value="sincos">SinCos Encoder (Gelombang Sin & Cos)</option>
-        <option value="absolute">Absolute 4-Bit (Gray Code vs Biner)</option>
-      </select>
-    </div>
+    <div class="cg"><label>Kecepatan dan arah: <span id="rpmV">6</span> RPM</label><input type="range" id="rpm" min="-20" max="20" value="6"></div>
+    <div class="cg"><label>Putar manual (set kecepatan 0): <span id="angV">0</span>°</label><input type="range" id="ang" min="0" max="359" value="0"></div>
+    <div class="cg"><label>Exploded view: <span id="expV">0</span>%</label><input type="range" id="exp" min="0" max="100" value="0"></div>
+    <div class="cg"><label>Tampilan:</label><div style="display:flex;gap:6px"><button class="btn on" id="btnLbl">Label</button><button class="btn" id="btnTop">Lihat dari atas</button></div></div>
+  </div>
 
-    <div class="control-group">
-      <label for="speedRange">2. Kecepatan & Arah Putar (<span id="speedVal">15</span> RPM):</label>
-      <input type="range" id="speedRange" min="-40" max="40" value="15">
-    </div>
-
-    <div class="control-group">
-      <label for="angleRange">3. Putar Manual Sudut (<span id="angleVal">0</span>°):</label>
-      <input type="range" id="angleRange" min="0" max="359" value="0">
+  <div class="main">
+    <div class="view3d" id="view"><div class="hint">Seret: putar · Scroll: zoom · Klik kanan + seret: geser</div></div>
+    <div class="right">
+      <div class="scope"><canvas id="scope" width="640" height="300"></canvas></div>
+      <div class="readout" id="readout"></div>
     </div>
   </div>
 
-  <div class="grid">
-    <!-- Panel Kiri: Piringan Encoder -->
-    <div class="canvas-box">
-      <canvas id="discCanvas" width="280" height="280"></canvas>
-      <div class="status-bar">
-        <span>Sudut: <strong id="degText">0.0°</strong></span>
-        <span id="dirBadge" class="badge cw">CW (A Mendahului B)</span>
-      </div>
-    </div>
-
-    <!-- Panel Kanan: Grafik Osiloskop & Data -->
-    <div class="canvas-box">
-      <canvas id="scopeCanvas" width="560" height="280"></canvas>
-      <div class="status-bar" id="dataReadout">
-        <span>Ch A: <strong id="valA">0</strong> | Ch B: <strong id="valB">0</strong> | Ch Z: <strong id="valZ">0</strong></span>
-        <span>Resolusi: <strong>8 PPR</strong></span>
-      </div>
-    </div>
+  <div class="info">
+    <div class="box" id="infoP"></div>
+    <div class="box alt" id="infoA"></div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-  const discCanvas = document.getElementById('discCanvas');
-  const dCtx = discCanvas.getContext('2d');
-  const scopeCanvas = document.getElementById('scopeCanvas');
-  const sCtx = scopeCanvas.getContext('2d');
+(function () {
+  const $ = id => document.getElementById(id);
+  const view = $('view');
+  if (typeof THREE === 'undefined' || !THREE.OrbitControls) { view.innerHTML = '<div class="err">Library 3D gagal dimuat. Pastikan perangkat terhubung ke internet, lalu muat ulang halaman.</div>'; return; }
+  const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+  const TAU = Math.PI * 2, N = 8, PSI_A = 0, PSI_B = Math.PI / (2 * N);
 
-  const modeSelect = document.getElementById('modeSelect');
-  const speedRange = document.getElementById('speedRange');
-  const angleRange = document.getElementById('angleRange');
-  const speedVal = document.getElementById('speedVal');
-  const angleVal = document.getElementById('angleVal');
-  const degText = document.getElementById('degText');
-  const dirBadge = document.getElementById('dirBadge');
-  const dataReadout = document.getElementById('dataReadout');
+  const INFO = {
+    inc: ['<h3>Incremental: pulsa A, B, dan Z</h3>Jalur luar piringan memiliki ' + N + ' celah. Dua sensor A dan B membaca jalur yang sama, tetapi bergeser 1/4 periode, sehingga sinyalnya berbeda fase 90°. Urutan A dan B menunjukkan arah putar. Jalur dalam hanya punya <b>satu celah Z</b> yang menghasilkan satu pulsa per putaran sebagai titik nol (homing). Encoder ini tidak menyimpan posisi: kontroler hanya menghitung pulsa sejak dinyalakan.',
+          '<h3>Analogi</h3>Seperti menghitung langkah dengan mata tertutup. Selama hitungan tidak terputus, posisi diketahui. Jika daya mati, hitungan hilang dan mekanisme harus mencari titik nol (Z) lagi.'],
+    abs: ['<h3>Absolute 4-bit: setiap posisi punya kode unik</h3>Piringan memiliki <b>4 jalur melingkar</b>, masing-masing dibaca satu sensor. Pola terang–gelap keempat jalur membentuk kode 4 bit yang berbeda untuk setiap 16 posisi (22,5° per posisi). Pola ini memakai <b>Gray code</b>: setiap pindah posisi hanya <b>satu bit</b> yang berubah. Bandingkan dengan biner biasa di panel kanan: perpindahan 7 → 8 (0111 → 1000) mengubah empat bit sekaligus, sehingga kesalahan baca sesaat mudah terjadi.',
+          '<h3>Analogi</h3>Seperti nomor rumah di sepanjang jalan: begitu berdiri di depan rumah, nomornya langsung memberi tahu posisi tanpa menghitung dari ujung jalan. Kotak bit yang bergaris oranye adalah bit yang baru saja berubah.'],
+    sincos: ['<h3>SinCos: sinyal analog untuk interpolasi</h3>Sensor tidak mengeluarkan pulsa kotak, melainkan tegangan analog yang naik-turun halus seperti gelombang sinus dan kosinus (beda fase 90°). Karena nilainya kontinu, kontroler dapat menghitung posisi <b>di antara dua celah</b> dengan rumus atan2(sin, cos). Satu periode gelombang dapat dibagi menjadi ratusan hingga ribuan titik (interpolasi), sehingga resolusinya jauh lebih tinggi daripada jumlah celah fisik.',
+             '<h3>Analogi</h3>Encoder kotak seperti tangga yang hanya memberi tahu anak tangga ke berapa. SinCos seperti jalan landai: posisi di antara dua titik pun dapat diukur.']
+  };
 
-  let angle = 0; // 0 - 360 derajat
-  let rpm = 15;
-  const PPR = 8; // 8 siklus per putaran agar mudah diamati
-  const history = [];
-  const maxHistory = 260;
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  view.prepend(renderer.domElement);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b1220);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100); camera.position.set(3.0, 2.9, 3.7);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0, 0, 0);
+  scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.8));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.9); dl.position.set(4, 8, 5); scene.add(dl);
+  const grid = new THREE.GridHelper(10, 20, 0x1e293b, 0x172033); grid.position.y = -1.4; scene.add(grid);
 
-  speedRange.addEventListener('input', (e) => {
-    rpm = parseFloat(e.target.value);
-    speedVal.textContent = rpm;
-    updateDirectionBadge();
-  });
+  const mat = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.45, metalness: 0.4 }, o));
+  const M = { disc: mat(0x94a3b8, { metalness: 0.65 }), hub: mat(0x64748b), shaft: mat(0xcbd5e1, { metalness: 0.9, roughness: 0.25 }), head: mat(0x1f2937, { metalness: 0.3 }), pcb: mat(0x166534, { metalness: 0.1 }) };
+  function sector(rIn, rOut, a0, a1, depth, m) {
+    const s = new THREE.Shape(); s.absarc(0, 0, rOut, a0, a1, false); s.absarc(0, 0, rIn, a1, a0, true);
+    const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 16 }); g.rotateX(-Math.PI / 2);
+    return new THREE.Mesh(g, m);
+  }
+  const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  const cyl = (r, h, m, seg = 24) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), m);
+  const posAt = (psi, r, y) => new THREE.Vector3(r * Math.cos(psi), y, -r * Math.sin(psi));
 
-  angleRange.addEventListener('input', (e) => {
-    rpm = 0;
-    speedRange.value = 0;
-    speedVal.textContent = 0;
-    angle = parseFloat(e.target.value);
-    angleVal.textContent = Math.round(angle);
-    updateDirectionBadge();
-    pushSignalState();
-  });
+  const root = new THREE.Group(); scene.add(root);
+  let rotor, sensors = [], beams = [], labels = [], expl = 0, lblOn = true, explGroups = [];
+  function label(text, obj, off = [0, 0.2, 0], key = false) {
+    const el = document.createElement('div'); el.className = 'lbl' + (key ? ' key' : ''); el.textContent = text; view.appendChild(el);
+    labels.push({ el, obj, off: new THREE.Vector3(...off) });
+  }
 
-  modeSelect.addEventListener('change', () => {
-    history.length = 0;
-  });
-
-  function updateDirectionBadge() {
-    if (rpm > 0) {
-      dirBadge.textContent = 'Putar Kanan / CW (A leads B)';
-      dirBadge.className = 'badge cw';
-    } else if (rpm < 0) {
-      dirBadge.textContent = 'Putar Kiri / CCW (B leads A)';
-      dirBadge.className = 'badge ccw';
+  // Jalur pembacaan untuk setiap mode: {psi, r, name}
+  const TRACKS_ABS = [0.55, 0.8, 1.05, 1.3];   // MSB di dalam, LSB di luar
+  function build(mode) {
+    while (root.children.length) root.remove(root.children[0]);
+    labels.forEach(l => l.el.remove()); labels = []; sensors = []; beams = []; explGroups = [];
+    rotor = new THREE.Group(); root.add(rotor);
+    const shaft = cyl(0.1, 2.2, M.shaft); shaft.position.y = -0.4; rotor.add(shaft);
+    rotor.add(cyl(0.3, 0.1, M.hub));
+    const reads = [];
+    if (mode === 'inc' || mode === 'sincos') {
+      const R = 1.25;
+      rotor.add(sector(0.25, 0.75, 0, TAU, 0.03, M.disc));
+      // jalur Z: semua tertutup kecuali satu celah
+      rotor.add(sector(0.75, 0.95, Math.PI / (2 * N), TAU, 0.03, M.disc));
+      // jalur A/B: celah di sin(Nβ) > 0
+      for (let k = 0; k < N; k++) { const a0 = TAU * k / N + Math.PI / N; rotor.add(sector(0.95, 1.55, a0, a0 + Math.PI / N, 0.03, M.disc)); }
+      rotor.add(sector(1.55, 1.68, 0, TAU, 0.03, M.disc));
+      label(mode === 'inc' ? `Jalur A/B: ${N} celah` : 'Kisi halus (grating)', rotor.children[4], [-0.6, 0.2, 1.1], true);
+      reads.push({ psi: PSI_A, r: R, name: mode === 'inc' ? 'Sensor A' : 'Sensor sin', col: 0x22c55e });
+      reads.push({ psi: PSI_B, r: R, name: mode === 'inc' ? 'Sensor B' : 'Sensor cos', col: 0xf59e0b });
+      if (mode === 'inc') { reads.push({ psi: PSI_A, r: 0.85, name: 'Sensor Z (index)', col: 0xef4444 }); label('Jalur Z: 1 celah', rotor.children[3], [-0.9, 0.15, -0.3]); }
     } else {
-      dirBadge.textContent = 'Berhenti (Mode Manual)';
-      dirBadge.className = 'badge stop';
-    }
-  }
-
-  function getSignals(deg) {
-    const rad = (deg * Math.PI) / 180;
-    const sinVal = Math.sin(PPR * rad);
-    const cosVal = Math.cos(PPR * rad);
-    const chA = sinVal >= 0 ? 1 : 0;
-    const chB = cosVal >= 0 ? 1 : 0;
-    const chZ = (deg >= 0 && deg < 12) ? 1 : 0;
-
-    // 4-bit Absolute (16 sektor @ 22.5 derajat)
-    const sector = Math.floor((deg % 360) / 22.5);
-    const gray = sector ^ (sector >> 1);
-
-    return { sinVal, cosVal, chA, chB, chZ, sector, gray };
-  }
-
-  function pushSignalState() {
-    const sig = getSignals(angle);
-    history.push(sig);
-    if (history.length > maxHistory) history.shift();
-  }
-
-  function drawDisc() {
-    dCtx.clearRect(0, 0, discCanvas.width, discCanvas.height);
-    const cx = discCanvas.width / 2;
-    const cy = discCanvas.height / 2;
-    const rOuter = 115;
-    const mode = modeSelect.value;
-
-    dCtx.save();
-    dCtx.translate(cx, cy);
-    dCtx.rotate((angle * Math.PI) / 180);
-
-    // Piringan Dasar
-    dCtx.beginPath();
-    dCtx.arc(0, 0, rOuter, 0, Math.PI * 2);
-    dCtx.fillStyle = '#1e293b';
-    dCtx.fill();
-    dCtx.lineWidth = 3;
-    dCtx.strokeStyle = '#475569';
-    dCtx.stroke();
-
-    if (mode === 'incremental' || mode === 'sincos') {
-      // Gambar celah PPR
-      for (let i = 0; i < PPR; i++) {
-        const startAngle = (i * 2 * Math.PI) / PPR;
-        const endAngle = startAngle + Math.PI / PPR;
-        dCtx.beginPath();
-        dCtx.arc(0, 0, rOuter - 12, startAngle, endAngle);
-        dCtx.arc(0, 0, rOuter - 38, endAngle, startAngle, true);
-        dCtx.closePath();
-        dCtx.fillStyle = mode === 'sincos' ? '#38bdf8' : '#e2e8f0';
-        dCtx.fill();
-      }
-      // Celah Index Z
-      dCtx.beginPath();
-      dCtx.arc(0, 0, rOuter - 48, 0, (12 * Math.PI) / 180);
-      dCtx.arc(0, 0, rOuter - 65, (12 * Math.PI) / 180, 0, true);
-      dCtx.closePath();
-      dCtx.fillStyle = '#ef4444';
-      dCtx.fill();
-    } else {
-      // Piringan Absolute 4-Bit Gray Code
-      const tracks = 4;
+      rotor.add(sector(0.25, 0.42, 0, TAU, 0.03, M.disc));
       for (let s = 0; s < 16; s++) {
-        const gray = s ^ (s >> 1);
-        const a0 = (s * 2 * Math.PI) / 16;
-        const a1 = ((s + 1) * 2 * Math.PI) / 16;
-        for (let b = 0; b < tracks; b++) {
-          const bit = (gray >> (3 - b)) & 1;
-          const r1 = rOuter - 8 - b * 20;
-          const r2 = r1 - 16;
-          dCtx.beginPath();
-          dCtx.arc(0, 0, r1, a0, a1);
-          dCtx.arc(0, 0, r2, a1, a0, true);
-          dCtx.closePath();
-          dCtx.fillStyle = bit ? '#38bdf8' : '#0f172a';
-          dCtx.fill();
-        }
+        const g = s ^ (s >> 1), a0 = TAU * s / 16, a1 = a0 + TAU / 16;
+        TRACKS_ABS.forEach((r, b) => { const bit = (g >> (3 - b)) & 1; if (!bit) rotor.add(sector(r - 0.125, r + 0.125, a0, a1, 0.03, M.disc)); });
       }
+      rotor.add(sector(1.425, 1.55, 0, TAU, 0.03, M.disc));
+      label('4 jalur Gray code (dalam = bit 3, luar = bit 0)', rotor.children[rotor.children.length - 1], [-0.4, 0.2, 1.3], true);
+      TRACKS_ABS.forEach((r, b) => reads.push({ psi: PSI_A + TAU / 32, r, name: 'G' + (3 - b), col: 0x38bdf8 }));
     }
-
-    // Poros Tengah Motor
-    dCtx.beginPath();
-    dCtx.arc(0, 0, 22, 0, Math.PI * 2);
-    dCtx.fillStyle = '#64748b';
-    dCtx.fill();
-    dCtx.restore();
-
-    // Indikator Sensor Pembaca Statis (di bagian atas)
-    dCtx.fillStyle = '#f43f5e';
-    dCtx.fillRect(cx - 3, cy - rOuter - 6, 6, 18);
+    // kepala pembaca: LED di atas, sensor di bawah
+    const head = new THREE.Group(); root.add(head);
+    const mid = reads[0].psi;
+    const rMin = Math.min(...reads.map(r => r.r)), rMax = Math.max(...reads.map(r => r.r));
+    const top = box(rMax - rMin + 0.5, 0.18, 0.55, M.head); top.position.copy(posAt(mid, (rMin + rMax) / 2, 0.6)); top.rotation.y = mid; head.add(top);
+    const bot = new THREE.Group(); root.add(bot);
+    const pcb = box(rMax - rMin + 0.6, 0.06, 0.7, M.pcb); pcb.position.copy(posAt(mid, (rMin + rMax) / 2, -0.45)); pcb.rotation.y = mid; bot.add(pcb);
+    label('LED (sumber cahaya)', top, [0, 0.2, 0]);
+    reads.forEach((rd, i) => {
+      const led = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), new THREE.MeshStandardMaterial({ color: 0xfecaca, emissive: 0xef4444, emissiveIntensity: 1 }));
+      led.position.copy(posAt(rd.psi, rd.r, 0.5)); head.add(led);
+      const sm = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, emissive: 0x000000 });
+      const sn = box(0.14, 0.08, 0.14, sm); sn.position.copy(posAt(rd.psi, rd.r, -0.38)); bot.add(sn);
+      sensors.push({ mat: sm, col: rd.col });
+      const bm = new THREE.MeshBasicMaterial({ color: 0xfca5a5, transparent: true, opacity: 0.5 });
+      const b = cyl(0.045, 0.85, bm, 10); b.position.copy(posAt(rd.psi, rd.r, 0.06)); root.add(b); beams.push(b);
+      if (mode !== 'abs' || i === 0 || i === 3) label(rd.name, sn, mode === 'abs' ? [i ? 0.5 : -0.5, -0.05, 0.3] : [i === 1 ? 0.45 : -0.35, -0.05, 0.3], true);
+    });
+    explGroups = [{ g: head, dy: 0.8 }, { g: bot, dy: -0.7 }];
   }
 
-  function formatBits(num) {
+  // ---------- sinyal ----------
+  let mode = 'inc', rpm = 6, theta = 0, hist = [], prevGray = 0, changed = -1;
+  const HMAX = 300;
+  function local(psi) { return (((psi - theta) % TAU) + TAU) % TAU; }
+  function signals() {
+    if (mode === 'abs') {
+      const s = Math.floor(local(PSI_A + TAU / 32) / (TAU / 16)) % 16, g = s ^ (s >> 1);
+      return { s, g, light: [3, 2, 1, 0].map(k => (g >> k) & 1) };
+    }
+    const bA = local(PSI_A), bB = local(PSI_B);
+    if (mode === 'inc') {
+      const A = Math.sin(N * bA) > 0 ? 1 : 0, B = Math.sin(N * bB) > 0 ? 1 : 0, Z = bA > 0 && bA < Math.PI / (2 * N) ? 1 : 0;
+      return { A, B, Z, light: [A, B, Z] };
+    }
+    const sn = Math.sin(N * bA), cs = Math.sin(N * bB);
+    return { sn, cs, light: [(sn + 1) / 2, (cs + 1) / 2] };
+  }
+
+  // ---------- UI ----------
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(o => o.classList.toggle('active', o === b));
+    mode = b.dataset.m; hist = []; build(mode); info();
+  }));
+  $('rpm').addEventListener('input', e => { rpm = +e.target.value; $('rpmV').textContent = rpm; });
+  $('ang').addEventListener('input', e => { rpm = 0; $('rpm').value = 0; $('rpmV').textContent = 0; theta = +e.target.value * Math.PI / 180; $('angV').textContent = e.target.value; hist.push(Object.assign({}, signals())); });
+  $('exp').addEventListener('input', e => { expl = +e.target.value / 100; $('expV').textContent = e.target.value; });
+  $('btnLbl').addEventListener('click', e => { lblOn = !lblOn; e.target.classList.toggle('on', lblOn); });
+  $('btnTop').addEventListener('click', () => { camera.position.set(0.01, 6, 0.01); controls.target.set(0, 0, 0); });
+  function info() { $('infoP').innerHTML = INFO[mode][0]; $('infoA').innerHTML = INFO[mode][1]; }
+
+  const bits = (v, hl) => '<span class="bits">' + [3, 2, 1, 0].map(k => { const b = (v >> k) & 1; return `<span class="bit b${b}${hl !== undefined && ((hl >> k) & 1) ? ' bitc' : ''}">${b}</span>`; }).join('') + '</span>';
+  const sc = $('scope'), sx = sc.getContext('2d');
+  function draw(sig) {
+    const w = sc.width, h = sc.height; sx.clearRect(0, 0, w, h);
+    const x0 = 80, dx = (w - x0 - 6) / HMAX;
+    sx.font = 'bold 12px sans-serif';
+    const trace = (rows) => rows.forEach(([name, col, f, y0, amp, step]) => {
+      sx.fillStyle = col; sx.fillText(name, 6, y0 - amp / 2 + 4);
+      sx.strokeStyle = '#1e293b'; sx.lineWidth = 1; sx.beginPath(); sx.moveTo(x0, y0); sx.lineTo(w, y0); sx.stroke();
+      sx.beginPath(); sx.strokeStyle = col; sx.lineWidth = 2;
+      hist.forEach((p, i) => { const y = y0 - f(p) * amp, x = x0 + i * dx; if (!i) sx.moveTo(x, y); else if (step) { sx.lineTo(x, y0 - f(hist[i - 1]) * amp); sx.lineTo(x, y); } else sx.lineTo(x, y); });
+      sx.stroke();
+    });
+    if (mode === 'inc') trace([['Channel A', '#22c55e', p => p.A, 80, 50, 1], ['Channel B', '#f59e0b', p => p.B, 175, 50, 1], ['Channel Z', '#ef4444', p => p.Z, 270, 50, 1]]);
+    else if (mode === 'sincos') trace([['Sin', '#22c55e', p => p.sn, 80, 50, 0], ['Cos', '#f59e0b', p => p.cs, 185, 50, 0], ['Interpolasi', '#c084fc', p => (Math.atan2(p.sn, p.cs) + Math.PI) / TAU, 290, 70, 0]]);
+    else trace([0, 1, 2, 3].map(k => ['Bit G' + (3 - k), '#38bdf8', p => (p.g >> (3 - k)) & 1, 70 + k * 68, 40, 1]));
     let html = '';
-    for (let i = 3; i >= 0; i--) {
-      const bit = (num >> i) & 1;
-      html += `<span class="bit-box ${bit ? 'bit-1' : 'bit-0'}">${bit}</span>`;
-    }
-    return html;
+    if (mode === 'inc') html = `A = <b>${sig.A}</b> · B = <b>${sig.B}</b> · Z = <b>${sig.Z}</b><br>Arah: <b>${rpm > 0 ? 'positif (A dan B bergantian, urutan maju)' : rpm < 0 ? 'negatif (urutan terbalik)' : 'diam'}</b><br>Resolusi: ${N} PPR, atau ${4 * N} hitungan per putaran dengan mode X4.`;
+    else if (mode === 'sincos') { const e = Math.atan2(sig.sn, sig.cs); html = `Sin = <b>${fmt(sig.sn, 2)}</b> · Cos = <b>${fmt(sig.cs, 2)}</b><br>Posisi di dalam satu periode (atan2): <b>${fmt(((e * 180 / Math.PI) + 360) % 360, 1)}°</b> listrik<br>Dengan interpolasi 1024 titik per periode, resolusinya ${N} × 1024 = <b>${N * 1024}</b> titik per putaran.`; }
+    else { const diffG = changed >= 0 ? changed : undefined; html = `Sektor <b>${sig.s}</b> dari 0–15 (setiap 22,5°)<br>Gray code: ${bits(sig.g, diffG)} &nbsp; Biner biasa: ${bits(sig.s)}<br>Bit bergaris oranye = bit yang baru berubah. Pada Gray code jumlahnya selalu satu.`; }
+    $('readout').innerHTML = html + `<br>Sudut poros: <b>${fmt(((theta * 180 / Math.PI) % 360 + 360) % 360, 1)}°</b>`;
   }
 
-  function drawScope() {
-    sCtx.clearRect(0, 0, scopeCanvas.width, scopeCanvas.height);
-    const w = scopeCanvas.width;
-    const h = scopeCanvas.height;
-    const mode = modeSelect.value;
-    const latest = getSignals(angle);
-
-    // Garis Grid
-    sCtx.strokeStyle = '#1e293b';
-    sCtx.lineWidth = 1;
-    for (let y = 40; y < h; y += 40) {
-      sCtx.beginPath(); sCtx.moveTo(0, y); sCtx.lineTo(w, y); sCtx.stroke();
-    }
-
-    if (mode === 'incremental') {
-      // Gambar Gelombang Kotak A, B, Z
-      const drawSquare = (key, yBase, color, label) => {
-        sCtx.fillStyle = color;
-        sCtx.font = 'bold 12px sans-serif';
-        sCtx.fillText(label, 10, yBase - 35);
-
-        sCtx.beginPath();
-        sCtx.strokeStyle = color;
-        sCtx.lineWidth = 2.5;
-        for (let i = 0; i < history.length; i++) {
-          const x = 90 + i * 1.8;
-          const y = yBase - history[i][key] * 35;
-          if (i === 0) sCtx.moveTo(x, y);
-          else {
-            const prevY = yBase - history[i - 1][key] * 35;
-            sCtx.lineTo(x, prevY);
-            sCtx.lineTo(x, y);
-          }
-        }
-        sCtx.stroke();
-      };
-
-      drawSquare('chA', 75, '#22c55e', 'Channel A');
-      drawSquare('chB', 165, '#f59e0b', 'Channel B (90°)');
-      drawSquare('chZ', 255, '#ef4444', 'Channel Z (Index)');
-
-      dataReadout.innerHTML = `
-        <span>Ch A: <strong style="color:#22c55e">${latest.chA}</strong> | 
-              Ch B: <strong style="color:#f59e0b">${latest.chB}</strong> | 
-              Ch Z: <strong style="color:#ef4444">${latest.chZ}</strong></span>
-        <span>Quadrature (A & B)</span>
-      `;
-    } else if (mode === 'sincos') {
-      // Gambar Gelombang Analog Sin & Cos
-      const drawWave = (key, yMid, color, label) => {
-        sCtx.fillStyle = color;
-        sCtx.font = 'bold 12px sans-serif';
-        sCtx.fillText(label, 10, yMid - 45);
-
-        sCtx.beginPath();
-        sCtx.strokeStyle = color;
-        sCtx.lineWidth = 2.5;
-        for (let i = 0; i < history.length; i++) {
-          const x = 90 + i * 1.8;
-          const y = yMid - history[i][key] * 40;
-          if (i === 0) sCtx.moveTo(x, y);
-          else sCtx.lineTo(x, y);
-        }
-        sCtx.stroke();
-      };
-
-      drawWave('sinVal', 85, '#38bdf8', 'Sin(θ) Analog');
-      drawWave('cosVal', 205, '#c084fc', 'Cos(θ) Analog');
-
-      const interpSubStep = Math.round((( Math.atan2(latest.sinVal, latest.cosVal) + Math.PI ) / (2 * Math.PI)) * 1024);
-      dataReadout.innerHTML = `
-        <span>Sin: <strong>${latest.sinVal.toFixed(2)} V</strong> | Cos: <strong>${latest.cosVal.toFixed(2)} V</strong></span>
-        <span>Interpolasi Halus: <strong>Titik ke-${interpSubStep} / 1024</strong> per gelombang</span>
-      `;
-    } else {
-      // Gambar Perbandingan Absolute Binary vs Gray Code
-      sCtx.fillStyle = '#e2e8f0';
-      sCtx.font = 'bold 14px sans-serif';
-      sCtx.fillText(`Sektor Sudut Saat Ini: Sektor #${latest.sector} (dari 0 - 15)`, 20, 45);
-
-      sCtx.font = '13px sans-serif';
-      sCtx.fillStyle = '#94a3b8';
-      sCtx.fillText('Perhatikan saat berganti sektor: Gray Code hanya mengubah 1 bit dalam satu waktu!', 20, 75);
-
-      // Visualisasi trek 4-bit sepanjang history
-      for (let b = 0; b < 4; b++) {
-        const yBase = 125 + b * 38;
-        sCtx.fillStyle = '#38bdf8';
-        sCtx.fillText(`Bit G${3 - b}`, 20, yBase - 5);
-
-        sCtx.beginPath();
-        sCtx.strokeStyle = '#38bdf8';
-        sCtx.lineWidth = 2;
-        for (let i = 0; i < history.length; i++) {
-          const bit = (history[i].gray >> (3 - b)) & 1;
-          const x = 90 + i * 1.8;
-          const y = yBase - bit * 18;
-          if (i === 0) sCtx.moveTo(x, y);
-          else {
-            const prevBit = (history[i - 1].gray >> (3 - b)) & 1;
-            sCtx.lineTo(x, yBase - prevBit * 18);
-            sCtx.lineTo(x, y);
-          }
-        }
-        sCtx.stroke();
-      }
-
-      dataReadout.innerHTML = `
-        <span>Gray Code: ${formatBits(latest.gray)}</span>
-        <span>Biner Standar: ${formatBits(latest.sector)}</span>
-      `;
-    }
+  const tmpV = new THREE.Vector3();
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    theta += rpm * TAU / 60 * dt;
+    const sig = signals();
+    if (mode === 'abs' && sig.g !== prevGray) { changed = sig.g ^ prevGray; prevGray = sig.g; }
+    if (rpm) { hist.push(Object.assign({}, sig)); if (hist.length > HMAX) hist.shift(); $('ang').value = Math.round(((theta * 180 / Math.PI) % 360 + 360) % 360); $('angV').textContent = $('ang').value; }
+    rotor.rotation.y = theta;
+    explGroups.forEach(e => e.g.position.y = e.dy * expl);
+    sig.light.forEach((v, i) => {
+      if (!beams[i]) return;
+      beams[i].material.opacity = 0.04 + 0.7 * v; beams[i].scale.y = 1 + expl * 1.8;
+      sensors[i].mat.emissive.setHex(v > 0.5 ? sensors[i].col : 0x000000); sensors[i].mat.emissiveIntensity = 0.3 + 0.7 * v;
+    });
+    labels.forEach(l => {
+      if (!lblOn) { l.el.style.display = 'none'; return; }
+      l.obj.getWorldPosition(tmpV); tmpV.add(l.off); tmpV.project(camera);
+      if (tmpV.z > 1) { l.el.style.display = 'none'; return; }
+      l.el.style.display = 'block';
+      l.el.style.left = ((tmpV.x + 1) / 2 * view.clientWidth) + 'px'; l.el.style.top = ((1 - tmpV.y) / 2 * view.clientHeight) + 'px';
+    });
+    controls.update(); renderer.render(scene, camera); draw(sig);
+    requestAnimationFrame(frame);
   }
-
-  function animate() {
-    if (rpm !== 0) {
-      // Update sudut berdasarkan RPM
-      angle = (angle + (rpm * 360) / (60 * 60)) % 360;
-      if (angle < 0) angle += 360;
-      angleRange.value = Math.round(angle);
-      angleVal.textContent = Math.round(angle);
-      pushSignalState();
-    }
-    degText.textContent = angle.toFixed(1) + '°';
-    drawDisc();
-    drawScope();
-    requestAnimationFrame(animate);
-  }
-
-  // Inisialisasi awal
-  pushSignalState();
-  animate();
+  function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  window.addEventListener('resize', resize);
+  build(mode); info(); resize(); requestAnimationFrame(frame);
+})();
 </script>
-
 </body>
 </html>

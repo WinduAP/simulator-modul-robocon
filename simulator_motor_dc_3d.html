@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulator 3D Cara Kerja Motor DC</title>
+  <style>
+    :root { --bg: #0f172a; --panel: #1e293b; --card: #090d16; --text: #f8fafc; --muted: #94a3b8; --accent: #38bdf8; --volt: #f59e0b; --amp: #ef4444; --rpm: #22c55e; --emf: #c084fc; --warn: #f59e0b; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+    .container { max-width: 1180px; width: 100%; background: var(--panel); border-radius: 12px; padding: 18px; border: 1px solid #334155; }
+    h2 { margin: 0 0 4px; font-size: 1.3rem; color: var(--accent); }
+    .sub { color: var(--muted); font-size: 0.88rem; margin: 0 0 12px; }
+    .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 12px; align-items: center; }
+    @media (max-width: 900px) { .controls { grid-template-columns: 1fr 1fr; } }
+    .cg { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+    input[type="range"] { width: 100%; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn { padding: 7px 9px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+    .btn.on { border-color: var(--accent); background: rgba(56,189,248,0.15); color: #7dd3fc; }
+    .btn.act { border-color: var(--warn); color: #fbbf24; }
+    .main { display: grid; grid-template-columns: 1fr 300px; gap: 12px; }
+    @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
+    .view3d { position: relative; background: #0b1220; border: 1px solid #334155; border-radius: 8px; height: 480px; overflow: hidden; }
+    .view3d canvas { display: block; width: 100%; height: 100%; }
+    .hint { position: absolute; left: 10px; bottom: 8px; font-size: 0.75rem; color: #64748b; pointer-events: none; }
+    .slow { position: absolute; right: 10px; top: 8px; font-size: 0.75rem; color: #64748b; pointer-events: none; }
+    .lbl { position: absolute; transform: translate(-50%, -100%); pointer-events: none; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; background: rgba(15,23,42,0.82); border: 1px solid #475569; border-radius: 5px; padding: 2px 6px; white-space: nowrap; }
+    .lbl::after { content: ''; position: absolute; left: 50%; top: 100%; width: 1px; height: 10px; background: #94a3b8; }
+    .lbl.key { border-color: var(--accent); color: #7dd3fc; }
+    .side { display: flex; flex-direction: column; gap: 8px; }
+    .m { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; }
+    .m .t { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; }
+    .m .val { font-size: 1.2rem; font-weight: 700; margin-top: 2px; }
+    .m .s { font-size: 0.72rem; color: #64748b; }
+    .status { background: #0f172a; border-left: 4px solid var(--accent); border-radius: 6px; padding: 9px 11px; font-size: 0.84rem; line-height: 1.5; }
+    .chart { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 8px; margin-top: 12px; }
+    .chart canvas { width: 100%; height: auto; display: block; }
+    .legend { font-size: 0.76rem; color: var(--muted); margin-top: 4px; }
+    .info { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; margin-top: 12px; }
+    @media (max-width: 760px) { .info { grid-template-columns: 1fr; } }
+    .box { padding: 11px 13px; background: #0f172a; border-left: 4px solid var(--accent); border-radius: 6px; font-size: 0.88rem; line-height: 1.55; color: #e2e8f0; }
+    .box h3 { margin: 0 0 6px; font-size: 0.95rem; color: var(--accent); }
+    .box ol, .box ul { margin: 4px 0 0 18px; padding: 0; }
+    .box.alt { border-left-color: var(--warn); } .box.alt h3 { color: #fbbf24; }
+    .err { color: #f87171; padding: 30px; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Simulator 3D: Cara Kerja Motor DC (Brushed)</h2>
+  <p class="sub">Lihat bagian dalam motor: magnet stator, kumparan jangkar, komutator, dan sikat. Panah merah adalah gaya Lorentz pada kumparan, titik kuning adalah arah arus, dan garis biru adalah medan magnet. Seret untuk memutar sudut pandang.</p>
+
+  <div class="controls">
+    <div class="cg"><label>Tegangan jangkar ea (PWM): <span id="vV">6,0</span> V</label><input type="range" id="volt" min="-12" max="12" step="0.5" value="6"></div>
+    <div class="cg"><label>Beban pada poros: <span id="lV">0,000</span> Nm</label><input type="range" id="load" min="0" max="0.12" step="0.005" value="0"></div>
+    <div class="cg"><label>Exploded view: <span id="eV">0</span>%</label><input type="range" id="exp" min="0" max="100" value="0"></div>
+    <div class="cg"><label>Jumlah kumparan:</label><div class="row"><button class="btn on" id="c1">1 kumparan</button><button class="btn" id="c2">2 kumparan</button><button class="btn act" id="push">Dorong poros</button></div></div>
+  </div>
+  <div class="row" style="margin:-4px 0 12px">
+    <button class="btn on" id="tB">Medan magnet B</button>
+    <button class="btn on" id="tI">Arus</button>
+    <button class="btn on" id="tF">Gaya F</button>
+    <button class="btn on" id="tL">Label</button>
+    <button class="btn" id="tH">Rumah motor</button>
+    <button class="btn" id="tS">Matikan motor (0 V)</button>
+  </div>
+
+  <div class="main">
+    <div class="view3d" id="view"><div class="hint">Seret: putar · Scroll: zoom · Klik kanan + seret: geser</div><div class="slow">Animasi putaran diperlambat 40×</div></div>
+    <div class="side">
+      <div class="m"><div class="t">Tegangan masuk ea</div><div class="val" id="mEa" style="color:var(--volt)">0 V</div><div class="s">dari driver (duty cycle PWM)</div></div>
+      <div class="m"><div class="t">Back-EMF eb = Kb · ω</div><div class="val" id="mEb" style="color:var(--emf)">0 V</div><div class="s">tegangan lawan dari putaran</div></div>
+      <div class="m"><div class="t">Arus jangkar ia = (ea − eb) ÷ Ra</div><div class="val" id="mIa" style="color:var(--amp)">0 A</div><div class="s" id="mIaS"></div></div>
+      <div class="m"><div class="t">Torsi motor T = Kt · ia</div><div class="val" id="mT" style="color:#fbbf24">0 Nm</div><div class="s" id="mTS"></div></div>
+      <div class="m"><div class="t">Kecepatan poros</div><div class="val" id="mW" style="color:var(--rpm)">0 RPM</div><div class="s" id="mWS"></div></div>
+    </div>
+  </div>
+
+  <div class="status" id="status" style="margin-top:12px"></div>
+
+  <div class="chart">
+    <canvas id="chart" width="1120" height="200"></canvas>
+    <div class="legend"><b style="color:#22c55e">— kecepatan (RPM)</b> &nbsp; <b style="color:#ef4444">— arus jangkar (A)</b> &nbsp; <b style="color:#c084fc">— back-EMF (V)</b> &nbsp; 10 detik terakhir</div>
+  </div>
+
+  <div class="info">
+    <div class="box">
+      <h3>Cara kerja motor DC langkah demi langkah</h3>
+      <ol>
+        <li><b>Arus masuk lewat sikat dan komutator.</b> Driver memberi tegangan ke dua sikat karbon. Sikat menempel pada komutator yang ikut berputar, sehingga arus mengalir ke kumparan jangkar.</li>
+        <li><b>Kumparan berada di dalam medan magnet.</b> Magnet stator menghasilkan medan B dari kutub N ke kutub S.</li>
+        <li><b>Gaya Lorentz F = B · I · L.</b> Kawat berarus di dalam medan magnet mendapat gaya. Dua sisi kumparan dialiri arus berlawanan arah, sehingga gayanya juga berlawanan: satu ke atas, satu ke bawah. Pasangan gaya ini menghasilkan torsi yang memutar poros.</li>
+        <li><b>Komutator membalik arus setiap setengah putaran.</b> Tanpa komutator, kumparan hanya berayun lalu berhenti. Komutator menukar sambungan tepat saat kumparan tegak, sehingga torsi selalu searah.</li>
+        <li><b>Putaran menghasilkan back-EMF.</b> Kumparan yang berputar memotong medan magnet dan bekerja seperti generator. Tegangan balik ini melawan ea, sehingga arus turun saat motor makin cepat. Kecepatan stabil ketika torsi motor sama dengan beban ditambah gesekan.</li>
+      </ol>
+    </div>
+    <div class="box alt">
+      <h3>Coba ini</h3>
+      <ul>
+        <li>Pilih <b>1 kumparan</b>, tekan <b>Matikan motor</b>, tunggu berhenti, lalu nyalakan lagi. Bila kumparan berhenti tegak, motor tidak mau mulai (titik mati). Tekan <b>Dorong poros</b>, atau pilih <b>2 kumparan</b>: itulah alasan motor nyata memakai banyak kumparan.</li>
+        <li>Perhatikan arus saat motor baru mulai: paling besar karena back-EMF masih nol (arus stall).</li>
+        <li>Naikkan <b>beban</b>: kecepatan turun, back-EMF turun, arus dan torsi naik.</li>
+        <li>Ubah tegangan menjadi negatif: arus berbalik, gaya berbalik, dan motor berputar ke arah sebaliknya.</li>
+      </ul>
+      <h3 style="margin-top:8px">Analogi</h3>
+      Seperti pesepeda: saat mulai dari diam, kaki harus menekan pedal paling keras (arus besar). Setelah melaju, pedal terasa ringan (back-EMF besar, arus kecil). Saat menanjak, kecepatan turun dan tenaga yang dibutuhkan naik lagi.
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const view = $('view');
+  if (typeof THREE === 'undefined' || !THREE.OrbitControls) { view.innerHTML = '<div class="err">Library 3D gagal dimuat. Pastikan perangkat terhubung ke internet, lalu muat ulang halaman.</div>'; return; }
+  const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+  const TAU = Math.PI * 2;
+
+  // ---------- parameter fisik ----------
+  const Ra = 2.0, Kt = 0.04, Kb = 0.04, J = 0.0004, B = 0.00005, SLOW = 40;
+  let ea = 6, Tload = 0, coils = 1, omega = 0, phi = 0.35, ia = 0, eb = 0, torque = 0;
+  const show = { B: true, I: true, F: true, L: true, H: false };
+  let expl = 0, vSaved = 6, off = false;
+
+  // ---------- three.js ----------
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  view.prepend(renderer.domElement);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b1220);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100); camera.position.set(2.3, 3.9, 3.6);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0, -0.2, -0.5);
+  scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.8));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.9); dl.position.set(4, 8, 6); scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0x88aaff, 0.3); dl2.position.set(-5, 2, -5); scene.add(dl2);
+  const grid = new THREE.GridHelper(12, 24, 0x1e293b, 0x172033); grid.position.y = -2.3; scene.add(grid);
+
+  const mat = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.5, metalness: 0.2 }, o));
+  const M = { north: mat(0xdc2626), south: mat(0x2563eb), steel: mat(0x475569, { metalness: 0.7, roughness: 0.4 }), copper: mat(0xd97706, { metalness: 0.75, roughness: 0.3 }), copperDim: mat(0x78350f, { metalness: 0.6 }), shaft: mat(0xe2e8f0, { metalness: 0.9, roughness: 0.2 }), carbon: mat(0x27272a, { roughness: 0.9 }), core: new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6, roughness: 0.4, transparent: true, opacity: 0.28, depthWrite: false }), housing: new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, transparent: true, opacity: 0.18, depthWrite: false }), driver: mat(0x1f2937) };
+
+  // annular sector pada bidang XY, diekstrusi sepanjang Z (poros motor = sumbu Z)
+  function sectorZ(rIn, rOut, a0, a1, len, m) {
+    const s = new THREE.Shape(); s.absarc(0, 0, rOut, a0, a1, false); s.absarc(0, 0, rIn, a1, a0, true);
+    const g = new THREE.ExtrudeGeometry(s, { depth: len, bevelEnabled: false, curveSegments: 32 }); g.translate(0, 0, -len / 2);
+    return new THREE.Mesh(g, m);
+  }
+  const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+
+  const L = 2.2, r = 0.62, ZC = -L / 2 - 0.75;          // panjang kumparan, jari-jari kumparan, posisi komutator
+  const labels = [];
+  function anchor(parent, x, y, z) { const o = new THREE.Object3D(); o.position.set(x, y, z); parent.add(o); return o; }
+  function label(text, obj, offv = [0, 0.25, 0], key = false) {
+    const el = document.createElement('div'); el.className = 'lbl' + (key ? ' key' : ''); el.textContent = text; view.appendChild(el);
+    labels.push({ el, obj, off: new THREE.Vector3(...offv) });
+  }
+
+  // stator
+  const stator = new THREE.Group(); scene.add(stator);
+  const magN = sectorZ(1.05, 1.4, Math.PI - 0.6, Math.PI + 0.6, L, M.north);
+  const magS = sectorZ(1.05, 1.4, -0.6, 0.6, L, M.south);
+  stator.add(magN, magS);
+  label('Magnet stator kutub N', anchor(magN, -1.25, 0.75, 0.9), [0, 0, 0], true);
+  label('Magnet stator kutub S', anchor(magS, 1.25, 0.75, 0.9), [0, 0, 0], true);
+  const housing = sectorZ(1.45, 1.6, 0, TAU, L + 0.5, M.housing); housing.visible = false; scene.add(housing);
+
+  // medan magnet (statis)
+  const fieldArrows = [];
+  [-0.45, 0.45].forEach(y => [-0.75, 0, 0.75].forEach(z => {
+    const a = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1.0, y, z), 2.0, 0x60a5fa, 0.16, 0.08);
+    a.line.material.transparent = true; a.line.material.opacity = 0.45; a.cone.material.transparent = true; a.cone.material.opacity = 0.6;
+    scene.add(a); fieldArrows.push(a);
+  }));
+  label('Medan magnet B (N → S)', anchor(scene, -0.5, 0.5, 0.95), [0, 0, 0]);
+
+  // rotor
+  const rotor = new THREE.Group(); scene.add(rotor);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, L + 3.0, 20), M.shaft); shaft.rotation.x = Math.PI / 2; shaft.position.z = -0.4; rotor.add(shaft);
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(r - 0.06, r - 0.06, L - 0.15, 40), M.core); core.rotation.x = Math.PI / 2; rotor.add(core);
+  label('Poros', anchor(rotor, 0, 0, L / 2 + 0.9), [0, 0.1, 0]);
+
+  function coilPath(angle) {
+    const c = Math.cos(angle), s = Math.sin(angle);
+    const P = (x, z) => new THREE.Vector3(x * c, x * s, z);
+    const path = new THREE.CurvePath();
+    const pts = [P(r, -L / 2), P(r, L / 2), P(-r, L / 2), P(-r, -L / 2), P(r, -L / 2)];
+    for (let i = 0; i < 4; i++) path.add(new THREE.LineCurve3(pts[i], pts[i + 1]));
+    return path;
+  }
+  const coilObjs = [0, Math.PI / 2].map((ang, k) => {
+    const path = coilPath(ang);
+    const mesh = new THREE.Mesh(new THREE.TubeGeometry(path, 80, 0.07, 10, true), M.copper);
+    rotor.add(mesh);
+    // kabel dari kumparan ke komutator
+    const c = Math.cos(ang), s = Math.sin(ang);
+    [1, -1].forEach(sg => {
+      const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(sg * r * c, sg * r * s, -L / 2), new THREE.Vector3(sg * 0.3 * c, sg * 0.3 * s, ZC + 0.2)]);
+      rotor.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xd97706 })));
+    });
+    const dots = [];
+    for (let i = 0; i < 14; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfde047 })); rotor.add(d); dots.push({ m: d, t: i / 14 }); }
+    return { mesh, path, ang, dots };
+  });
+  label('Kumparan jangkar (armature)', anchor(rotor, r, 0, L / 2), [0, 0.15, 0], true);
+
+  // komutator
+  const commGroup = new THREE.Group(); rotor.add(commGroup);
+  function buildComm(n) {
+    while (commGroup.children.length) commGroup.remove(commGroup.children[0]);
+    const gap = 0.12;
+    for (let k = 0; k < n; k++) {
+      const a0 = TAU * k / n + (n === 2 ? 0 : Math.PI / 4) + gap / 2;
+      const seg = sectorZ(0.22, 0.32, a0, a0 + TAU / n - gap, 0.4, k % 2 ? M.copper : mat(0xf59e0b, { metalness: 0.75, roughness: 0.3 }));
+      seg.position.z = ZC; commGroup.add(seg);
+    }
+  }
+  buildComm(2);
+  label('Komutator (cincin terbelah)', anchor(commGroup, 0.35, 0, ZC), [0.35, 0.1, 0], true);
+
+  // sikat + driver (stasioner)
+  const brushG = new THREE.Group(); scene.add(brushG);
+  const brushTop = box(0.18, 0.32, 0.26, M.carbon); brushTop.position.set(0, 0.48, ZC); brushG.add(brushTop);
+  const brushBot = box(0.18, 0.32, 0.26, M.carbon); brushBot.position.set(0, -0.48, ZC); brushG.add(brushBot);
+  label('Sikat karbon (+)', brushTop, [-0.45, 0.15, 0], true);
+  label('Sikat karbon (−)', brushBot, [0.45, -0.1, 0], true);
+  const driver = box(0.9, 0.5, 0.5, M.driver); driver.position.set(-1.9, -1.4, ZC - 0.4); brushG.add(driver);
+  label('Driver motor (sumber ea)', driver, [0, 0.35, 0]);
+  const wireMat = [new THREE.LineBasicMaterial({ color: 0xef4444 }), new THREE.LineBasicMaterial({ color: 0x3b82f6 })];
+  const wTop = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.6, -1.15, ZC - 0.4), new THREE.Vector3(-1.6, 0.85, ZC - 0.4), new THREE.Vector3(0, 0.85, ZC), new THREE.Vector3(0, 0.64, ZC)]), wireMat[0]);
+  const wBot = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.45, -1.15, ZC - 0.4), new THREE.Vector3(-1.45, -0.85, ZC - 0.4), new THREE.Vector3(0, -0.85, ZC), new THREE.Vector3(0, -0.64, ZC)]), wireMat[1]);
+  brushG.add(wTop, wBot);
+
+  // panah gaya Lorentz
+  const fArrows = [0, 1, 2, 3].map(() => { const a = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(), 0.5, 0xf87171, 0.18, 0.12); scene.add(a); return a; });
+  label('Gaya Lorentz F', fArrows[0].cone, [0, 0.15, 0]);
+
+  // ---------- UI ----------
+  const sl = (id, cb) => $(id).addEventListener('input', e => cb(+e.target.value));
+  sl('volt', v => { ea = v; vSaved = v; off = false; $('tS').classList.remove('on'); $('vV').textContent = fmt(v); });
+  sl('load', v => { Tload = v; $('lV').textContent = fmt(v, 3); });
+  sl('exp', v => { expl = v / 100; $('eV').textContent = v; });
+  function setCoils(n) { coils = n; $('c1').classList.toggle('on', n === 1); $('c2').classList.toggle('on', n === 2); buildComm(n === 1 ? 2 : 4); coilObjs[1].mesh.visible = n === 2; coilObjs[1].dots.forEach(d => d.m.visible = n === 2); }
+  $('c1').onclick = () => setCoils(1); $('c2').onclick = () => setCoils(2);
+  $('push').onclick = () => { omega += 25; };
+  const tog = (id, key, fn) => $(id).onclick = e => { show[key] = !show[key]; e.target.classList.toggle('on', show[key]); if (fn) fn(); };
+  tog('tB', 'B', () => fieldArrows.forEach(a => a.visible = show.B));
+  tog('tI', 'I'); tog('tF', 'F'); tog('tL', 'L');
+  tog('tH', 'H', () => housing.visible = show.H);
+  $('tS').onclick = e => { off = !off; e.target.classList.toggle('on', off); ea = off ? 0 : vSaved; e.target.textContent = off ? 'Nyalakan motor' : 'Matikan motor (0 V)'; };
+  setCoils(1);
+
+  // ---------- fisika ----------
+  // faktor torsi sesaat terhadap sudut kumparan (komutator menjaga tanda tetap)
+  const fInst = p => coils === 1 ? Math.abs(Math.cos(p)) : Math.max(Math.abs(Math.cos(p)), Math.abs(Math.sin(p)));
+  const fAvg = () => coils === 1 ? 2 / Math.PI : 0.9;
+  function step(dt) {
+    const blend = Math.min(1, Math.abs(omega) / 20);
+    const f = fInst(phi) * (1 - blend) + fAvg() * blend;
+    eb = Kb * omega * f;
+    ia = (ea - eb) / Ra;
+    torque = Kt * ia * f;
+    let tl = Tload * Math.sign(omega || torque);
+    let net = torque - B * omega - tl;
+    if (Math.abs(omega) < 0.5 && Math.abs(torque) <= Tload) { net = 0; omega *= 0.9; }   // gesekan statis menahan poros
+    omega += net / J * dt;
+    phi += omega * dt / SLOW;
+  }
+
+  const hist = []; const HMAX = 600;
+  const cv = $('chart'), cx = cv.getContext('2d');
+  function drawChart() {
+    const w = cv.width, h = cv.height, x0 = 50, y0 = 10, y1 = h - 20;
+    cx.clearRect(0, 0, w, h);
+    cx.strokeStyle = '#1e293b'; for (let k = 0; k <= 4; k++) { const y = y0 + (y1 - y0) * k / 4; cx.beginPath(); cx.moveTo(x0, y); cx.lineTo(w, y); cx.stroke(); }
+    cx.fillStyle = '#64748b'; cx.font = '11px sans-serif'; cx.fillText('maks', 8, y0 + 8); cx.fillText('0', 30, (y0 + y1) / 2 + 4); cx.fillText('−maks', 6, y1);
+    const dx = (w - x0) / HMAX;
+    const series = [['rpm', '#22c55e', 5000], ['ia', '#ef4444', 6.5], ['eb', '#c084fc', 12.5]];
+    series.forEach(([k, col, mx]) => { cx.beginPath(); cx.strokeStyle = col; cx.lineWidth = 2; hist.forEach((p, i) => { const y = (y0 + y1) / 2 - Math.max(-1, Math.min(1, p[k] / mx)) * (y1 - y0) / 2; i ? cx.lineTo(x0 + i * dx, y) : cx.moveTo(x0, y); }); cx.stroke(); });
+  }
+
+  const tmp = new THREE.Vector3();
+  let last = performance.now();
+  function frame(now) {
+    const dtReal = Math.min(0.05, (now - last) / 1000); last = now;
+    const n = 20; for (let i = 0; i < n; i++) step(dtReal / n);
+    const rpm = omega * 60 / TAU;
+    hist.push({ rpm, ia, eb }); if (hist.length > HMAX) hist.shift();
+
+    rotor.rotation.z = phi;
+    // exploded view
+    magN.position.x = -1.2 * expl; magS.position.x = 1.2 * expl;
+    brushG.position.z = -1.0 * expl; commGroup.position.z = -0.5 * expl;
+    housing.position.z = 0;
+
+    // arus pada kumparan aktif (tanda dibalik komutator)
+    coilObjs.forEach((c, k) => {
+      const pk = phi + c.ang;
+      let active = coils === 1 ? (k === 0) : (k === 0 ? Math.abs(Math.cos(phi)) >= Math.abs(Math.sin(phi)) : Math.abs(Math.sin(phi)) > Math.abs(Math.cos(phi)));
+      const sgn = Math.sign(Math.cos(pk)) || 1;
+      const iCoil = active ? ia * sgn : 0;
+      c.mesh.material = active && Math.abs(ia) > 0.05 ? M.copper : M.copperDim;
+      c.dots.forEach(d => {
+        d.t = (d.t + iCoil * dtReal * 0.06 + 1) % 1;
+        d.m.position.copy(c.path.getPointAt(d.t));
+        d.m.visible = show.I && active && Math.abs(ia) > 0.05 && (coils === 2 || k === 0);
+      });
+      // gaya pada dua sisi panjang: F ∝ i (arah ±Y dunia)
+      [0, 1].forEach(side => {
+        const a = fArrows[k * 2 + side];
+        const sx = side ? -1 : 1;
+        const ang = phi + c.ang;
+        a.position.set(sx * r * Math.cos(ang), sx * r * Math.sin(ang), 0.2);
+        const F = iCoil * sx;
+        a.setDirection(tmp.set(0, Math.sign(F) || 1, 0));
+        const len = Math.min(1.4, 0.35 + Math.abs(F) * 0.35);
+        a.setLength(len, 0.22, 0.16);
+        a.visible = show.F && active && Math.abs(F) > 0.05 && (coils === 2 || k === 0);
+      });
+    });
+    wireMat[0].color.setHex(ea >= 0 ? 0xef4444 : 0x3b82f6); wireMat[1].color.setHex(ea >= 0 ? 0x3b82f6 : 0xef4444);
+
+    // angka
+    $('mEa').textContent = fmt(ea) + ' V';
+    $('mEb').textContent = fmt(eb, 2) + ' V';
+    $('mIa').textContent = fmt(ia, 2) + ' A';
+    $('mIaS').textContent = Math.abs(rpm) < 30 && Math.abs(ea) > 0.5 ? 'hampir arus stall (eb ≈ 0)' : `Ra = ${fmt(Ra)} Ω`;
+    $('mT').textContent = fmt(torque, 3) + ' Nm';
+    $('mTS').textContent = `beban ${fmt(Tload, 3)} Nm + gesekan`;
+    $('mW').textContent = Math.round(rpm) + ' RPM';
+    $('mWS').textContent = `ω = ${fmt(omega, 1)} rad/s`;
+    let st;
+    if (Math.abs(ea) < 0.25) st = 'Tegangan nol: tidak ada arus dari driver. Poros melambat karena gesekan dan beban.';
+    else if (Math.abs(omega) < 0.6 && Math.abs(torque) <= Tload + 1e-4 && coils === 1 && fInst(phi) < 0.15) st = '<b>Titik mati:</b> kumparan tegak lurus medan sehingga gaya kedua sisinya segaris dan tidak menghasilkan torsi. Tekan <b>Dorong poros</b> atau pilih <b>2 kumparan</b>.';
+    else if (Math.abs(omega) < 0.6 && Math.abs(torque) <= Tload + 1e-4) st = '<b>Motor tertahan (stall):</b> torsi motor tidak cukup melawan beban. Arus paling besar karena back-EMF nol.';
+    else if (Math.abs(rpm) < 300) st = '<b>Mulai berputar:</b> back-EMF masih kecil sehingga arus besar dan torsi besar. Motor berakselerasi.';
+    else st = `<b>Berputar stabil:</b> back-EMF ${fmt(eb, 1)} V hampir menyamai ea ${fmt(ea, 1)} V, sehingga arus tinggal ${fmt(ia, 2)} A, cukup untuk melawan beban dan gesekan.`;
+    $('status').innerHTML = st;
+
+    labels.forEach(l => {
+      if (!show.L) { l.el.style.display = 'none'; return; }
+      l.obj.getWorldPosition(tmp); tmp.add(l.off); tmp.project(camera);
+      if (tmp.z > 1) { l.el.style.display = 'none'; return; }
+      l.el.style.display = 'block'; l.el.style.left = ((tmp.x + 1) / 2 * view.clientWidth) + 'px'; l.el.style.top = ((1 - tmp.y) / 2 * view.clientHeight) + 'px';
+    });
+    controls.update(); renderer.render(scene, camera); drawChart();
+    requestAnimationFrame(frame);
+  }
+  function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  window.addEventListener('resize', resize);
+  resize(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

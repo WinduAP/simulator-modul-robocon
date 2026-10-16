@@ -118,7 +118,7 @@
         <text x="149" y="126" fill="#e2e8f0" font-size="20" font-weight="700" text-anchor="middle" pointer-events="none">Σ</text>
         <text x="128" y="106" fill="#22c55e" font-size="14" font-weight="700" pointer-events="none">+</text>
         <text x="156" y="158" fill="#c084fc" font-size="16" font-weight="700" pointer-events="none">−</text></g>
-      <g class="blk clk" data-key="controller"><rect x="218" y="92" width="120" height="56" rx="8"/><text x="278" y="117" id="tCtrl">Controller</text><text class="small" x="278" y="135" id="sCtrl">PI di STM32</text></g>
+      <g class="blk clk" data-key="controller"><rect x="218" y="92" width="120" height="56" rx="8"/><text x="278" y="117" id="tCtrl">Controller</text><text class="small" x="278" y="135" id="sCtrl">program PI</text></g>
       <g class="blk clk" data-key="actuator"><rect x="398" y="92" width="120" height="56" rx="8"/><text x="458" y="117" id="tAct">Actuator</text><text class="small" x="458" y="135" id="sAct">Motor driver</text></g>
       <g class="blk clk" data-key="plant"><rect x="578" y="92" width="120" height="56" rx="8"/><text x="638" y="117" id="tPlant">Plant G(s)</text><text class="small" x="638" y="135" id="sPlant">Motor + roda</text></g>
       <g class="clk" data-key="branch"><circle cx="780" cy="120" r="6" fill="#e2e8f0" stroke="#475569" stroke-width="2"/></g>
@@ -145,11 +145,11 @@
     plant: { name: 'Plant', sym: 'G(s)', def: 'Objek fisik yang dikendalikan keadaannya. Keluarannya adalah besaran yang ingin diatur.', robot: 'Motor DC beserta gearbox dan roda robot.', analogy: 'Air dan pipa pancuran.', els: ['plant'] },
     setpoint: { name: 'Set-point / reference input', sym: 'r(t), R(s)', def: 'Nilai target yang diperintahkan ke sistem.', robot: 'Kecepatan roda yang diminta, misalnya 1000 RPM. Geser slider set-point untuk mengubahnya.', analogy: 'Suhu air yang diinginkan.', els: ['setpoint'] },
     output: { name: 'Controlled variable / process variable', sym: 'c(t), C(s), PV', def: 'Besaran nyata yang dikendalikan; keluaran utama plant.', robot: 'Kecepatan roda yang sebenarnya.', analogy: 'Suhu air yang benar-benar keluar dari pancuran.', els: ['output'] },
-    sensor: { name: 'Sensor / measuring element', sym: 'H(s)', def: 'Alat ukur yang membaca c(t) dan mengubahnya menjadi sinyal yang dapat dibandingkan dengan set-point.', robot: 'Encoder yang dibaca timer STM32 lalu diubah menjadi RPM.', analogy: 'Kulit tangan yang merasakan air.', els: ['sensor'] },
+    sensor: { name: 'Sensor / measuring element', sym: 'H(s)', def: 'Alat ukur yang membaca c(t) dan mengubahnya menjadi sinyal yang dapat dibandingkan dengan set-point.', robot: 'Encoder yang pulsanya dihitung mikrokontroler lalu diubah menjadi RPM.', analogy: 'Kulit tangan yang merasakan air.', els: ['sensor'] },
     feedback: { name: 'Feedback signal', sym: 'b(t), B(s)', def: 'Sinyal hasil pembacaan sensor yang dikirim kembali ke titik pembanding. Coba tombol "Putuskan kabel sensor": b(t) menjadi 0, controller mengira roda diam dan memberi PWM penuh.', robot: 'Nilai RPM hasil hitungan encoder.', analogy: 'Rasa hangat/dingin yang sampai ke otak.', els: ['feedback'] },
     summing: { name: 'Comparator / summing point', sym: 'Σ dengan tanda + dan −', def: 'Titik yang mengurangkan sinyal acuan dengan sinyal umpan balik: e(t) = r(t) − b(t).', robot: 'Baris program error = target − rpm_terukur.', analogy: 'Otak membandingkan "seharusnya" dengan "yang terasa".', els: ['summing'] },
     error: { name: 'Actuating error signal', sym: 'e(t), E(s)', def: 'Selisih acuan dan umpan balik. Pada sensor ideal e(t) = r(t) − c(t). Tujuan sistem kendali adalah membuat nilai ini mendekati nol.', robot: 'Kekurangan atau kelebihan RPM saat ini.', analogy: '"Masih terlalu dingin" atau "kepanasan".', els: ['error'] },
-    controller: { name: 'Controller', sym: 'Gc(s)', def: 'Bagian yang membaca error dan menghitung besar koreksi. Di simulator ini memakai PI dengan anti-windup.', robot: 'Fungsi PID di STM32.', analogy: 'Otak yang memutuskan seberapa jauh keran harus diputar.', els: ['controller'] },
+    controller: { name: 'Controller', sym: 'Gc(s)', def: 'Bagian yang membaca error dan menghitung besar koreksi. Di simulator ini memakai PI dengan anti-windup.', robot: 'Program PID di mikrokontroler.', analogy: 'Otak yang memutuskan seberapa jauh keran harus diputar.', els: ['controller'] },
     control: { name: 'Manipulated variable / control signal', sym: 'u(t), U(s)', def: 'Sinyal keluaran controller yang diberikan ke aktuator. Nilainya dibatasi 0–100%.', robot: 'Duty cycle PWM ke motor driver.', analogy: 'Perintah otak ke tangan: "putar keran sedikit lagi".', els: ['control'] },
     actuator: { name: 'Actuator', sym: '–', def: 'Perangkat berdaya yang menjalankan perintah u(t) ke plant.', robot: 'Motor driver (H-bridge) yang menyalurkan daya baterai ke motor.', analogy: 'Tangan yang memutar keran.', els: ['actuator'] },
     disturbance: { name: 'Disturbance', sym: 'd(t), D(s)', def: 'Gangguan yang menggeser keluaran dari set-point. Geser slider gangguan: tanpa umpan balik kecepatan turun permanen, dengan umpan balik controller menaikkan PWM sampai kecepatan kembali.', robot: 'Tanjakan, beban tambahan, atau gesekan lantai.', analogy: 'Orang lain menyalakan keran dapur sehingga suhu pancuran berubah.', els: ['disturbance'] },
@@ -159,7 +159,7 @@
   const ORDER = ['system', 'process', 'plant', 'setpoint', 'output', 'sensor', 'feedback', 'summing', 'error', 'controller', 'control', 'actuator', 'disturbance', 'block', 'branch'];
 
   const NAMES = {
-    normal: { tCtrl: 'Controller', sCtrl: 'PI di STM32', tAct: 'Actuator', sAct: 'Motor driver', tPlant: 'Plant G(s)', sPlant: 'Motor + roda', tSens: 'Sensor H(s)', sSens: 'Encoder' },
+    normal: { tCtrl: 'Controller', sCtrl: 'program PI', tAct: 'Actuator', sAct: 'Motor driver', tPlant: 'Plant G(s)', sPlant: 'Motor + roda', tSens: 'Sensor H(s)', sSens: 'Encoder' },
     analogy: { tCtrl: 'Otak', sCtrl: 'memutuskan koreksi', tAct: 'Tangan', sAct: 'memutar keran', tPlant: 'Air & pipa', sPlant: 'suhu berubah', tSens: 'Kulit', sSens: 'merasakan suhu' }
   };
 

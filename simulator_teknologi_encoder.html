@@ -3,562 +3,617 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulator Teknologi Sensor Encoder</title>
+  <title>Simulator 3D Teknologi Sensor Encoder</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #1e293b;
-      --card: #090d16;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --raw: #c084fc;
-      --dig: #22c55e;
-      --danger: #ef4444;
-      --warn: #f59e0b;
+      --bg: #0f172a; --panel: #1e293b; --card: #090d16; --text: #f8fafc; --muted: #94a3b8;
+      --accent: #38bdf8; --chA: #22c55e; --chB: #f59e0b; --out: #c084fc; --danger: #ef4444; --warn: #f59e0b;
     }
     * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body {
-      margin: 0; padding: 20px;
-      background: var(--bg); color: var(--text);
-      display: flex; justify-content: center;
-    }
-    .container {
-      max-width: 1000px; width: 100%;
-      background: var(--panel); border-radius: 12px;
-      padding: 20px; border: 1px solid #334155;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-    }
-    h2 { margin-top: 0; font-size: 1.3rem; color: var(--accent); }
-    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
-    @media (max-width: 700px) { .tabs { grid-template-columns: repeat(2, 1fr); } }
-    .tab {
-      padding: 10px 8px; border-radius: 8px; border: 1px solid #475569;
-      background: #0f172a; color: #cbd5e1; font-weight: 700; font-size: 0.9rem;
-      cursor: pointer; transition: 0.15s;
-    }
-    .tab:hover { background: #334155; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+    .container { max-width: 1180px; width: 100%; background: var(--panel); border-radius: 12px; padding: 18px; border: 1px solid #334155; }
+    h2 { margin: 0 0 4px; font-size: 1.3rem; color: var(--accent); }
+    .sub { color: var(--muted); font-size: 0.88rem; margin: 0 0 12px; }
+    .tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
+    @media (max-width: 760px) { .tabs { grid-template-columns: repeat(2, 1fr); } }
+    .tab { padding: 9px 6px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; font-weight: 700; font-size: 0.85rem; cursor: pointer; line-height: 1.2; }
+    .tab small { display: block; font-weight: 500; color: #94a3b8; font-size: 0.72rem; margin-top: 2px; }
     .tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); }
-
-    .controls {
-      display: grid; grid-template-columns: 1.2fr 2fr;
-      gap: 15px; background: #0f172a; padding: 14px; border-radius: 8px;
-      margin-bottom: 16px; align-items: center;
-    }
-    @media (max-width: 760px) { .controls { grid-template-columns: 1fr; } }
-    .control-group { display: flex; flex-direction: column; gap: 6px; }
-    label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+    .tab.active small { color: #0f172a; }
+    .controls { display: grid; grid-template-columns: 1.1fr 1fr 2fr; gap: 14px; background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 12px; align-items: center; }
+    @media (max-width: 900px) { .controls { grid-template-columns: 1fr; } }
+    .cg { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
     input[type="range"] { width: 100%; }
-    .dist-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    @media (max-width: 760px) { .dist-row { grid-template-columns: repeat(2, 1fr); } }
-    .dist {
-      padding: 8px 6px; border-radius: 6px; border: 1px solid #475569;
-      background: #1e293b; color: #e2e8f0; font-size: 0.8rem; font-weight: 600;
-      cursor: pointer; text-align: center; line-height: 1.25;
-    }
-    .dist.on { border-color: var(--warn); background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
-
-    .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-    @media (max-width: 760px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
-    .metric-card { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 10px; text-align: center; }
-    .metric-title { font-size: 0.74rem; color: var(--muted); text-transform: uppercase; }
-    .metric-value { font-size: 1.35rem; font-weight: bold; margin-top: 4px; color: var(--accent); }
-    .metric-sub { font-size: 0.74rem; color: #64748b; margin-top: 2px; }
-
-    .main-grid { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
-    @media (max-width: 820px) { .main-grid { grid-template-columns: 1fr; } }
-    .canvas-box {
-      background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 10px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-    }
-    canvas { max-width: 100%; border-radius: 6px; }
-    .caption { font-size: 0.78rem; color: var(--muted); margin-top: 6px; text-align: center; }
-
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
-    @media (max-width: 760px) { .info-grid { grid-template-columns: 1fr; } }
-    .info-box {
-      padding: 12px 14px; background: #0f172a; border-left: 4px solid var(--accent);
-      border-radius: 6px; font-size: 0.9rem; line-height: 1.55; color: #e2e8f0;
-    }
-    .info-box h3 { margin: 0 0 6px; font-size: 0.95rem; color: var(--accent); }
-    .info-box.analogi { border-left-color: var(--warn); }
-    .info-box.analogi h3 { color: #fbbf24; }
-    .plus { color: #4ade80; font-weight: 700; }
-    .minus { color: #f87171; font-weight: 700; }
-
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.85rem; }
-    th, td { border: 1px solid #334155; padding: 7px 9px; text-align: center; }
-    th { background: #0f172a; color: var(--accent); }
-    td:first-child, th:first-child { text-align: left; }
-    tr.sel td { background: rgba(56, 189, 248, 0.12); }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn { padding: 7px 9px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+    .btn.on { border-color: var(--warn); background: rgba(245,158,11,0.18); color: #fbbf24; }
+    .btn.view.on { border-color: var(--accent); background: rgba(56,189,248,0.15); color: #7dd3fc; }
+    .main { display: grid; grid-template-columns: 1fr 300px; gap: 12px; }
+    @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
+    .view3d { position: relative; background: #0b1220; border: 1px solid #334155; border-radius: 8px; height: 470px; overflow: hidden; }
+    .view3d canvas { display: block; width: 100%; height: 100%; }
+    .hint { position: absolute; left: 10px; bottom: 8px; font-size: 0.75rem; color: #64748b; pointer-events: none; }
+    .lbl { position: absolute; transform: translate(-50%, -100%); pointer-events: none; font-size: 0.72rem; font-weight: 700; color: #e2e8f0; background: rgba(15,23,42,0.82); border: 1px solid #475569; border-radius: 5px; padding: 2px 6px; white-space: nowrap; }
+    .lbl::after { content: ''; position: absolute; left: 50%; top: 100%; width: 1px; height: 10px; background: #94a3b8; }
+    .lbl.key { border-color: var(--accent); color: #7dd3fc; }
+    .chain { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .chain h3 { margin: 0 0 4px; font-size: 0.92rem; color: var(--accent); }
+    .stage { background: #0f172a; border: 1px solid #334155; border-radius: 7px; padding: 7px 9px; }
+    .stage .n { font-size: 0.8rem; font-weight: 700; color: #e2e8f0; }
+    .stage .d { font-size: 0.74rem; color: #94a3b8; margin-top: 2px; line-height: 1.35; }
+    .stage .v { font-family: Consolas, monospace; font-size: 0.8rem; color: #7dd3fc; margin-top: 3px; }
+    .arrow { text-align: center; color: #475569; font-size: 0.8rem; line-height: 0.8; }
+    .dash { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+    @media (max-width: 760px) { .dash { grid-template-columns: repeat(2, 1fr); } }
+    .m { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 9px; text-align: center; }
+    .m .t { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; }
+    .m .val { font-size: 1.25rem; font-weight: 700; margin-top: 3px; color: var(--accent); }
+    .m .s { font-size: 0.72rem; color: #64748b; }
+    .scope { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 8px; }
+    .scope canvas { width: 100%; height: auto; display: block; }
+    .legend { font-size: 0.76rem; color: var(--muted); margin-top: 4px; }
+    .info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    @media (max-width: 760px) { .info { grid-template-columns: 1fr; } }
+    .box { padding: 11px 13px; background: #0f172a; border-left: 4px solid var(--accent); border-radius: 6px; font-size: 0.88rem; line-height: 1.55; color: #e2e8f0; }
+    .box h3 { margin: 0 0 6px; font-size: 0.95rem; color: var(--accent); }
+    .box.alt { border-left-color: var(--warn); } .box.alt h3 { color: #fbbf24; }
+    .box ul { margin: 4px 0 0 18px; padding: 0; }
+    .plus { color: #4ade80; font-weight: 700; } .minus { color: #f87171; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.82rem; }
+    th, td { border: 1px solid #334155; padding: 6px 8px; text-align: center; }
+    th { background: #0f172a; color: var(--accent); } td:first-child, th:first-child { text-align: left; }
+    tr.sel td { background: rgba(56,189,248,0.12); }
     .good { color: #4ade80; } .mid { color: #fbbf24; } .bad { color: #f87171; }
-    .table-wrap { overflow-x: auto; }
+    .err { color: #f87171; padding: 30px; text-align: center; }
   </style>
 </head>
 <body>
-
 <div class="container">
-  <h2>Simulator Teknologi Sensor Encoder: Optical, Magnetic, Capacitive, Inductive</h2>
+  <h2>Simulator 3D: Teknologi Sensor pada Encoder</h2>
+  <p class="sub">Seret untuk memutar sudut pandang, scroll untuk zoom. Geser <b>Exploded view</b> untuk memisahkan komponen dan melihat bagian penerima sinyal (sensor) di dalam encoder.</p>
 
   <div class="tabs" id="tabs">
-    <button class="tab active" data-tech="optical">1. Optical</button>
-    <button class="tab" data-tech="magnetic">2. Magnetic</button>
-    <button class="tab" data-tech="capacitive">3. Capacitive</button>
-    <button class="tab" data-tech="inductive">4. Inductive</button>
+    <button class="tab active" data-t="optical">1. Optical<small>LED + photodiode</small></button>
+    <button class="tab" data-t="magAxis">2a. Magnetic on-axis<small>IC Hall AS5600 / AS5047</small></button>
+    <button class="tab" data-t="magRing">2b. Magnetic multipole<small>2 sensor Hall (JGB37)</small></button>
+    <button class="tab" data-t="capacitive">3. Capacitive<small>elektroda TX/RX (AMT10x)</small></button>
+    <button class="tab" data-t="inductive">4. Inductive<small>kumparan PCB (IPS2200)</small></button>
   </div>
 
   <div class="controls">
-    <div class="control-group">
-      <label for="speed">Kecepatan putar (<span id="speedVal">12</span> RPM):</label>
-      <input type="range" id="speed" min="0" max="30" value="12">
+    <div class="cg">
+      <label>Kecepatan dan arah: <span id="rpmV">8</span> RPM</label>
+      <input type="range" id="rpm" min="-20" max="20" value="8">
     </div>
-    <div class="control-group">
-      <label>Beri gangguan lingkungan (klik untuk menyalakan/mematikan):</label>
-      <div class="dist-row">
-        <button class="dist" data-dist="dust">Debu &amp; uap oli</button>
-        <button class="dist" data-dist="magnet">Medan magnet luar</button>
-        <button class="dist" data-dist="liquid">Cairan konduktif</button>
-        <button class="dist" data-dist="vibration">Getaran / guncangan</button>
+    <div class="cg">
+      <label>Exploded view: <span id="expV">0</span>%</label>
+      <input type="range" id="exp" min="0" max="100" value="0">
+    </div>
+    <div class="cg">
+      <label>Gangguan lingkungan dan tampilan:</label>
+      <div class="row">
+        <button class="btn" data-d="dust">Debu &amp; oli</button>
+        <button class="btn" data-d="magnet">Magnet luar</button>
+        <button class="btn" data-d="liquid">Cairan</button>
+        <button class="btn" data-d="vibration">Getaran</button>
+        <button class="btn view on" id="btnLbl">Label</button>
+        <button class="btn view" id="btnCase">Tutup housing</button>
       </div>
     </div>
   </div>
 
-  <div class="dashboard">
-    <div class="metric-card">
-      <div class="metric-title">Sinyal mentah sensor</div>
-      <div class="metric-value" id="rawVal" style="color:var(--raw)">0.00</div>
-      <div class="metric-sub" id="rawUnit">Intensitas cahaya</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-title">Keluaran digital</div>
-      <div class="metric-value" id="digVal" style="color:var(--dig)">LOW</div>
-      <div class="metric-sub">Setelah komparator</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-title">Pulsa seharusnya / terbaca</div>
-      <div class="metric-value" id="countVal">0 / 0</div>
-      <div class="metric-sub">Dihitung sejak gangguan diubah</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-title">Status pembacaan</div>
-      <div class="metric-value" id="statusVal" style="font-size:1.05rem; margin-top:8px;">AMAN</div>
-      <div class="metric-sub" id="statusSub">Pulsa sesuai</div>
-    </div>
+  <div class="main">
+    <div class="view3d" id="view"><div class="hint">Seret: putar · Scroll: zoom · Klik kanan + seret: geser</div></div>
+    <div class="chain" id="chain"></div>
   </div>
 
-  <div class="main-grid">
-    <div class="canvas-box">
-      <canvas id="disc" width="280" height="300"></canvas>
-      <div class="caption" id="discCaption"></div>
-    </div>
-    <div class="canvas-box">
-      <canvas id="scope" width="640" height="300"></canvas>
-      <div class="caption">Atas: sinyal mentah dari elemen sensor. Garis putus-putus: ambang komparator. Bawah: pulsa digital yang dikirim ke kontroler.</div>
-    </div>
+  <div class="dash">
+    <div class="m"><div class="t">Sudut poros sebenarnya</div><div class="val" id="mTrue">0,0°</div><div class="s">posisi mekanis</div></div>
+    <div class="m"><div class="t">Sudut terbaca kontroler</div><div class="val" id="mMeas" style="color:var(--out)">0,0°</div><div class="s">dari sinyal sensor</div></div>
+    <div class="m"><div class="t">Selisih (error)</div><div class="val" id="mErr" style="color:#fbbf24">0,0°</div><div class="s" id="mRes">resolusi</div></div>
+    <div class="m"><div class="t">Status pembacaan</div><div class="val" id="mStat" style="font-size:1.05rem;margin-top:7px">AKURAT</div><div class="s" id="mStatS">sinyal bersih</div></div>
   </div>
 
-  <div class="info-grid">
-    <div class="info-box" id="principle"></div>
-    <div class="info-box analogi" id="analogy"></div>
+  <div class="scope">
+    <canvas id="scope" width="1120" height="250"></canvas>
+    <div class="legend" id="legend"></div>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr><th>Teknologi</th><th>Resolusi</th><th>Debu &amp; oli</th><th>Medan magnet</th><th>Cairan</th><th>Getaran</th><th>Biaya</th></tr>
-      </thead>
-      <tbody id="cmpBody">
-        <tr data-tech="optical"><td>Optical</td><td class="good">Sangat tinggi</td><td class="bad">Rentan</td><td class="good">Tahan</td><td class="bad">Rentan</td><td class="mid">Piringan kaca bisa retak</td><td class="mid">Sedang</td></tr>
-        <tr data-tech="magnetic"><td>Magnetic</td><td class="mid">Sedang–tinggi</td><td class="good">Tahan</td><td class="bad">Rentan</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="good">Murah</td></tr>
-        <tr data-tech="capacitive"><td>Capacitive</td><td class="good">Tinggi, dapat diprogram</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="bad">Rentan bila housing terbuka</td><td class="good">Tahan</td><td class="mid">Sedang</td></tr>
-        <tr data-tech="inductive"><td>Inductive</td><td class="good">Tinggi</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="bad">Mahal</td></tr>
-      </tbody>
-    </table>
+  <div class="info">
+    <div class="box" id="infoP"></div>
+    <div class="box alt" id="infoA"></div>
   </div>
+
+  <table>
+    <thead><tr><th>Teknologi</th><th>Elemen penerima</th><th>Resolusi</th><th>Debu &amp; oli</th><th>Magnet luar</th><th>Cairan</th><th>Getaran</th><th>Contoh komponen</th></tr></thead>
+    <tbody id="cmp">
+      <tr data-t="optical"><td>Optical</td><td>Photodiode / phototransistor</td><td class="good">Sangat tinggi</td><td class="bad">Rentan</td><td class="good">Tahan</td><td class="bad">Rentan</td><td class="mid">Sedang</td><td>HEDS-5540, Omron E6B2</td></tr>
+      <tr data-t="magAxis"><td>Magnetic on-axis</td><td>IC dengan 4 elemen Hall</td><td class="good">12–14 bit</td><td class="good">Tahan</td><td class="bad">Rentan</td><td class="good">Tahan</td><td class="good">Tahan</td><td>AS5600, AS5047P, MT6701</td></tr>
+      <tr data-t="magRing"><td>Magnetic multipole</td><td>2 sensor Hall</td><td class="bad">Rendah (7–11 PPR)</td><td class="good">Tahan</td><td class="bad">Rentan</td><td class="good">Tahan</td><td class="good">Tahan</td><td>Encoder motor JGB37, N20</td></tr>
+      <tr data-t="capacitive"><td>Capacitive</td><td>Elektroda RX + ASIC</td><td class="good">Tinggi, dapat diprogram</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="bad">Rentan</td><td class="good">Tahan</td><td>CUI AMT102, AMT103</td></tr>
+      <tr data-t="inductive"><td>Inductive</td><td>Kumparan RX sin/cos</td><td class="good">Tinggi</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="good">Tahan</td><td class="good">Tahan</td><td>Renesas IPS2200, Zettlex IncOder</td></tr>
+    </tbody>
+  </table>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-  const disc = document.getElementById('disc');
-  const dCtx = disc.getContext('2d');
-  const scope = document.getElementById('scope');
-  const sCtx = scope.getContext('2d');
+(function () {
+  const $ = id => document.getElementById(id);
+  const view = $('view');
+  if (typeof THREE === 'undefined' || !THREE.OrbitControls) {
+    view.innerHTML = '<div class="err">Library 3D gagal dimuat. Pastikan perangkat terhubung ke internet, lalu muat ulang halaman.</div>';
+    return;
+  }
+  const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+  const TAU = Math.PI * 2;
+  const N = 8;                                   // celah / pasangan kutub / gerigi per putaran
+  const R = 1.6;                                 // jari-jari jalur pola
+  const PSI_A = 0, PSI_B = Math.PI / (2 * N);    // posisi sensor A dan B (beda 1/4 periode)
 
-  const N = 8;                 // jumlah segmen pola per putaran
-  const THRESH = { optical: 0.5, magnetic: 0, capacitive: 0.5, inductive: 0.5 };
-  const RAW_RANGE = { optical: [0, 1], magnetic: [-1.4, 2.4], capacitive: [0, 1], inductive: [0, 1] };
-  const RAW_UNIT = {
-    optical: 'Intensitas cahaya (0–1)',
-    magnetic: 'Medan magnet B (ternormalisasi)',
-    capacitive: 'Kapasitansi (ternormalisasi)',
-    inductive: 'Kopling induktif (ternormalisasi)'
-  };
-
-  const INFO = {
+  const T = {
     optical: {
-      caption: 'LED di atas piringan, photodiode di bawahnya. Berkas cahaya tampak saat celah lewat.',
-      principle: '<h3>Prinsip kerja</h3>Cahaya LED ditembakkan melewati piringan bercelah (code disc) menuju photodiode. Saat celah lewat, cahaya diterima (HIGH); saat bagian gelap lewat, cahaya terhalang (LOW).<br><span class="plus">Kelebihan:</span> resolusi paling tinggi, tidak terpengaruh magnet.<br><span class="minus">Kelemahan:</span> debu, uap oli, embun, dan guncangan. Coba nyalakan <em>Debu &amp; uap oli</em>: cahaya melemah sampai di bawah ambang sehingga pulsa hilang.',
-      analogy: '<h3>Analogi</h3>Menyorotkan senter menembus kipas angin yang berputar ke arah dinding. Setiap bilah yang lewat menghalangi cahaya, sehingga dinding berkedip terang–gelap. Kalau kaca senter tertutup debu, kedipannya makin redup dan sulit dihitung.'
+      principle: '<h3>Bagian penerima: photodiode</h3>LED inframerah memancarkan cahaya ke piringan bercelah. Di bawah piringan ada <b>masker (reticle)</b> berkisi sama rapat, lalu <b>dua photodiode</b> (A dan B) yang dipasang bergeser 1/4 periode. Saat celah piringan sejajar dengan kisi masker, cahaya lolos dan photodiode menghasilkan arus beberapa µA. Arus kecil ini diubah menjadi tegangan oleh <b>penguat</b>, lalu <b>komparator</b> mengubahnya menjadi pulsa kotak A dan B.<br><span class="plus">Kelebihan:</span> resolusi sangat tinggi. <span class="minus">Kelemahan:</span> debu, oli, dan embun menghalangi cahaya.',
+      analogy: '<h3>Analogi</h3>Seperti menyorot senter melalui kipas angin ke arah dua lubang kecil di dinding. Lubang kedua digeser sedikit, sehingga dari urutan mana yang terang lebih dulu kita tahu arah putar kipas.<ul><li>Contoh komponen: HEDS-5540 (Broadcom), Omron E6B2-CWZ6C, atau photo-interrupter celah untuk encoder buatan sendiri.</li></ul>',
+      chain: [['LED inframerah', 'sumber cahaya ~850 nm', s => 'arus LED ±20 mA'], ['Piringan bercelah + masker', `${N} celah per putaran`, s => `cahaya lolos A ${fmt(s.a * 100, 0)}% · B ${fmt(s.b * 100, 0)}%`], ['Photodiode A dan B', 'mengubah cahaya menjadi arus', s => `I_A ${fmt(s.a * 8, 1)} µA · I_B ${fmt(s.b * 8, 1)} µA`], ['Penguat + komparator', 'ambang 50% dengan histeresis', s => `A=${s.dA}  B=${s.dB}`], ['Keluaran A/B quadrature', 'dihitung mikrokontroler (mode X4)', s => `hitungan ${s.count}`]],
+      scope: ['Arus photodiode A', 'Arus photodiode B', 'Pulsa digital A (atas) dan B (bawah)'],
+      incremental: true
     },
-    magnetic: {
-      caption: 'Cincin magnet N (merah) dan S (biru) berputar di bawah chip sensor Hall.',
-      principle: '<h3>Prinsip kerja</h3>Cincin magnet dengan kutub utara–selatan bergantian berputar di dekat sensor Hall-effect atau magnetoresistive. Sensor membaca arah medan: positif saat kutub N lewat, negatif saat kutub S lewat.<br><span class="plus">Kelebihan:</span> tahan debu, oli, air, dan getaran.<br><span class="minus">Kelemahan:</span> resolusi di bawah optik dan terganggu medan magnet luar. Coba nyalakan <em>Medan magnet luar</em>: kurva bergeser sehingga sensor terus membaca HIGH sehingga pulsa hilang.',
-      analogy: '<h3>Analogi</h3>Jarum kompas yang bergoyang setiap kali magnet kulkas digerakkan bergantian di dekatnya. Debu tidak menghalangi, tetapi magnet besar di dekat kompas membuat jarum menunjuk arah yang salah.'
+    magAxis: {
+      principle: '<h3>Bagian penerima: IC dengan 4 elemen Hall</h3>Magnet silinder <b>dimagnetisasi diametral</b> (setengah kutub N, setengah kutub S) dipasang di ujung poros. Tepat di atasnya, berjarak sekitar 0,5–3 mm, ada <b>IC sensor</b> seperti AS5600 atau AS5047P. Di dalam IC terdapat <b>empat elemen Hall</b> yang mengukur dua komponen medan, Bx dan By. Karena medan ikut berputar bersama magnet, Bx dan By membentuk sinyal kosinus dan sinus. IC lalu menghitung <b>sudut = atan2(By, Bx)</b> dan mengirimkannya sebagai angka 12–14 bit.<br><span class="plus">Kelebihan:</span> posisi absolut, murah, tahan debu. <span class="minus">Kelemahan:</span> magnet luar ikut menggeser Bx dan By sehingga sudut salah.',
+      analogy: '<h3>Analogi</h3>Seperti kompas yang diletakkan tepat di atas magnet yang berputar: jarumnya langsung menunjuk arah magnet tanpa perlu menghitung langkah.<ul><li>Contoh komponen: AS5600 (12-bit), AS5047P (14-bit), MT6701 (14-bit).</li><li>Magnet harus tepat segaris dengan pusat IC dan jaraknya sesuai datasheet.</li></ul>',
+      chain: [['Magnet diametral', 'berputar bersama poros', s => `arah kutub N: ${fmt(s.trueDeg % 360 < 0 ? s.trueDeg % 360 + 360 : s.trueDeg % 360, 1)}°`], ['4 elemen Hall di dalam IC', 'mengukur Bx dan By', s => `Bx ${fmt(s.a, 2)} · By ${fmt(s.b, 2)}`], ['Pengolah sudut atan2', 'di dalam IC', s => `sudut ${fmt(((s.measDeg % 360) + 360) % 360, 1)}°`], ['Register sudut 12 bit', '0–4095 per putaran', s => `nilai ${Math.round(((s.measDeg % 360) + 360) % 360 / 360 * 4096) % 4096}`], ['Keluaran digital / PWM', 'dibaca mikrokontroler', s => s.ok ? 'medan normal' : 'medan terganggu']],
+      scope: ['Bx (kosinus)', 'By (sinus)', 'Sudut hasil atan2 (ungu) dan sudut sebenarnya (abu-abu)'],
+      incremental: false
+    },
+    magRing: {
+      principle: '<h3>Bagian penerima: dua sensor Hall</h3>Cincin magnet dengan kutub N dan S bergantian dipasang pada poros motor. <b>Dua sensor Hall</b> (A dan B) dipasang di dekat cincin dengan jarak 1/4 periode kutub. Setiap sensor mengeluarkan HIGH saat kutub N lewat dan LOW saat kutub S lewat, sehingga terbentuk sinyal quadrature A/B. Susunan ini dipakai pada encoder di belakang motor JGB37-520 atau N20 yang banyak dipakai robot.<br><span class="plus">Kelebihan:</span> murah dan tahan kotor. <span class="minus">Kelemahan:</span> resolusi rendah (umumnya 7–11 pulsa per putaran poros motor, sebelum dikali rasio gearbox) dan terganggu magnet luar.',
+      analogy: '<h3>Analogi</h3>Seperti dua orang di pinggir lintasan yang mencatat setiap kali pelari berbaju merah lewat. Karena posisi mereka sedikit berbeda, urutan siapa yang melihat lebih dulu menunjukkan arah lari.<ul><li>Contoh komponen: sensor Hall digital A3144/AH3144, atau modul encoder bawaan motor JGB37 dan N20.</li><li>Resolusi di poros keluaran = PPR motor × rasio gearbox × 4 (mode X4).</li></ul>',
+      chain: [['Cincin magnet multipole', `${N} pasang kutub N–S`, s => `kutub di sensor A: ${s.a > 0 ? 'N' : 'S'}`], ['Sensor Hall A dan B', 'tegangan Hall sebanding medan', s => `V_A ${fmt(s.a, 2)} · V_B ${fmt(s.b, 2)}`], ['Komparator di dalam sensor', 'keluaran open-drain', s => `A=${s.dA}  B=${s.dB}`], ['Resistor pull-up', 'level logika aman untuk kontroler', s => `A ${s.dA ? 'HIGH' : 'LOW'} · B ${s.dB ? 'HIGH' : 'LOW'}`], ['Penghitung quadrature X4', 'di mikrokontroler', s => `hitungan ${s.count}`]],
+      scope: ['Tegangan Hall A', 'Tegangan Hall B', 'Pulsa digital A (atas) dan B (bawah)'],
+      incremental: true
     },
     capacitive: {
-      caption: 'Elektroda pemancar (TX) dan penerima (RX) di atas piringan berpola tembaga.',
-      principle: '<h3>Prinsip kerja</h3>Pola elektroda pada piringan mengubah kapasitansi antara pelat pemancar (TX) dan penerima (RX) saat berputar. Rangkaian elektronik membaca perubahan muatan itu menjadi posisi.<br><span class="plus">Kelebihan:</span> tahan debu, oli, dan magnet; hemat daya; resolusi dapat diprogram.<br><span class="minus">Kelemahan:</span> cairan konduktif di antara elektroda bila housing terbuka. Coba nyalakan <em>Cairan konduktif</em>.',
-      analogy: '<h3>Analogi</h3>Layar sentuh ponsel yang mengetahui posisi jari dari perubahan muatan listrik, bukan dari tekanan. Layar yang basah oleh air juga sering salah membaca sentuhan.'
+      principle: '<h3>Bagian penerima: elektroda RX + ASIC</h3>PCB stator berisi <b>elektroda pemancar (TX)</b> yang diberi sinyal frekuensi tinggi dan <b>elektroda penerima (RX)</b>. Di bawahnya, rotor berupa PCB dengan pola tembaga. Saat rotor berputar, besar kopling kapasitif dari TX ke RX berubah mengikuti pola, sehingga RX menerima sinyal sinus dan kosinus. <b>ASIC</b> di stator mendemodulasi sinyal itu lalu menginterpolasi sudut menjadi pulsa A/B atau data serial.<br><span class="plus">Kelebihan:</span> resolusi dapat diprogram, hemat daya, tahan debu dan magnet. <span class="minus">Kelemahan:</span> cairan konduktif mengubah kapasitansi sehingga muncul pembacaan palsu.',
+      analogy: '<h3>Analogi</h3>Seperti layar sentuh ponsel yang mengetahui posisi jari dari perubahan muatan listrik. Air di layar membuat ponsel salah membaca sentuhan.<ul><li>Contoh komponen: CUI Devices AMT102 dan AMT103, resolusinya diatur dengan DIP switch.</li></ul>',
+      chain: [['Elektroda TX', 'eksitasi frekuensi tinggi', s => 'sinyal ratusan kHz'], ['Pola rotor (tembaga)', 'mengubah kopling kapasitif', s => `kopling ${fmt((s.a + 1) / 2 * 100, 0)}%`], ['Elektroda RX sin / cos', 'menerima muatan', s => `sin ${fmt(s.a, 2)} · cos ${fmt(s.b, 2)}`], ['ASIC demodulator + interpolasi', 'atan2 per periode', s => `sudut ${fmt(((s.measDeg % 360) + 360) % 360, 1)}°`], ['Keluaran A/B atau serial', 'resolusi dapat diprogram', s => s.ok ? 'normal' : 'gangguan kapasitif']],
+      scope: ['Sinyal RX sinus', 'Sinyal RX kosinus', 'Sudut hasil interpolasi (ungu) dan sudut sebenarnya (abu-abu)'],
+      incremental: false
     },
     inductive: {
-      caption: 'Kumparan tercetak pada PCB di atas target logam bergerigi yang berputar.',
-      principle: '<h3>Prinsip kerja</h3>Kumparan pemancar pada PCB membangkitkan medan bolak-balik. Gerigi logam pada rotor menimbulkan arus pusar (eddy current) yang mengubah kopling ke kumparan penerima, sehingga amplitudo sinyal mengikuti posisi rotor.<br><span class="plus">Kelebihan:</span> akurasi tinggi dan tahan debu, oli, cairan, magnet, serta getaran.<br><span class="minus">Kelemahan:</span> komponen dan pengolah sinyalnya lebih mahal. Coba nyalakan semua gangguan: sinyal tetap terbaca.',
-      analogy: '<h3>Analogi</h3>Detektor logam di bandara: kumparan merasakan benda logam yang lewat melalui perubahan medan induksi, walaupun benda itu tertutup kotoran atau basah.'
+      principle: '<h3>Bagian penerima: kumparan RX sin/cos di PCB</h3>PCB stator memiliki <b>kumparan pemancar (TX)</b> melingkar yang dialiri arus bolak-balik, serta <b>dua kumparan penerima (RX)</b> yang jejaknya berbentuk gelombang sinus dan kosinus. Rotor berupa <b>target logam</b> bergerigi. Saat gerigi berada di bawah kumparan, terbentuk <b>arus pusar (eddy current)</b> yang melawan medan TX sehingga tegangan induksi di RX berubah. IC seperti Renesas IPS2200 mendemodulasi kedua sinyal RX lalu menghitung sudut.<br><span class="plus">Kelebihan:</span> akurat dan tahan debu, oli, air, magnet, serta getaran. <span class="minus">Kelemahan:</span> lebih mahal dan rangkaiannya lebih rumit.',
+      analogy: '<h3>Analogi</h3>Seperti detektor logam di bandara: kumparan merasakan benda logam yang lewat walaupun benda itu tertutup kotoran atau basah.<ul><li>Contoh komponen: Renesas IPS2200, Zettlex IncOder, Celera Motion.</li><li>Target cukup logam biasa (aluminium, kuningan), tidak perlu magnet.</li></ul>',
+      chain: [['Kumparan TX + osilator', 'medan bolak-balik', s => 'osilator beberapa MHz'], ['Target logam bergerigi', 'arus pusar pada gerigi', s => `gerigi di sensor: ${s.a > 0 ? 'ya' : 'tidak'}`], ['Kumparan RX sin dan cos', 'tegangan induksi berubah', s => `sin ${fmt(s.a, 2)} · cos ${fmt(s.b, 2)}`], ['IC demodulator (IPS2200)', 'atan2 per periode', s => `sudut ${fmt(((s.measDeg % 360) + 360) % 360, 1)}°`], ['Keluaran analog / digital', 'ke mikrokontroler', s => s.ok ? 'normal' : 'periksa sinyal']],
+      scope: ['Tegangan RX sinus', 'Tegangan RX kosinus', 'Sudut hasil interpolasi (ungu) dan sudut sebenarnya (abu-abu)'],
+      incremental: false
     }
   };
 
-  let tech = 'optical';
-  let rpm = 12;
-  let angle = 0;
-  const dist = { dust: false, magnet: false, liquid: false, vibration: false };
-  const history = [];
-  const maxHistory = 300;
-  let prevDig = 0, prevIdeal = 0, countIdeal = 0, countRead = 0;
-  let liquidGlitch = 0;
+  // ---------- three.js ----------
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  view.prepend(renderer.domElement);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b1220);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  camera.position.set(4.3, 3.1, 5.0);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.set(0, -0.15, 0);
+  scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.9); dl.position.set(4, 8, 5); scene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0x88aaff, 0.35); dl2.position.set(-5, 3, -4); scene.add(dl2);
+  const grid = new THREE.GridHelper(10, 20, 0x1e293b, 0x172033); grid.position.y = -2.2; scene.add(grid);
 
-  // ---- kontrol ---------------------------------------------------------
-  document.getElementById('tabs').addEventListener('click', (e) => {
-    const b = e.target.closest('.tab');
-    if (!b) return;
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === b));
-    tech = b.dataset.tech;
-    resetCounters();
-    updateInfo();
-  });
-  document.querySelectorAll('.dist').forEach(b => b.addEventListener('click', () => {
-    dist[b.dataset.dist] = !dist[b.dataset.dist];
-    b.classList.toggle('on', dist[b.dataset.dist]);
-    resetCounters();
-  }));
-  document.getElementById('speed').addEventListener('input', (e) => {
-    rpm = parseFloat(e.target.value);
-    document.getElementById('speedVal').textContent = rpm;
-  });
-
-  function resetCounters() {
-    history.length = 0;
-    countIdeal = 0; countRead = 0;
-    prevDig = 0; prevIdeal = 0;
+  const mat = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.55, metalness: 0.15 }, o));
+  const M = {
+    motor: mat(0x334155, { metalness: 0.5 }), shaft: mat(0xcbd5e1, { metalness: 0.9, roughness: 0.25 }),
+    pcb: mat(0x166534), pcbDark: mat(0x14532d), chip: mat(0x111827, { roughness: 0.4 }), pin: mat(0xd1d5db, { metalness: 0.9 }),
+    copper: mat(0xd97706, { metalness: 0.7, roughness: 0.3 }), disc: mat(0x94a3b8, { metalness: 0.6, roughness: 0.3 }),
+    north: mat(0xdc2626), south: mat(0x2563eb), alu: mat(0xd1d5db, { metalness: 0.85, roughness: 0.25 }),
+    mask: mat(0x475569, { metalness: 0.5 }), housing: new THREE.MeshStandardMaterial({ color: 0x64748b, transparent: true, opacity: 0.22, depthWrite: false })
+  };
+  function sector(rIn, rOut, a0, a1, depth, material) {
+    const s = new THREE.Shape();
+    s.absarc(0, 0, rOut, a0, a1, false);
+    s.absarc(0, 0, rIn, a1, a0, true);
+    const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 24 });
+    g.rotateX(-Math.PI / 2);
+    return new THREE.Mesh(g, material);
   }
-
-  function updateInfo() {
-    document.getElementById('principle').innerHTML = INFO[tech].principle;
-    document.getElementById('analogy').innerHTML = INFO[tech].analogy;
-    document.getElementById('discCaption').textContent = INFO[tech].caption;
-    document.getElementById('rawUnit').textContent = RAW_UNIT[tech];
-    document.querySelectorAll('#cmpBody tr').forEach(r => r.classList.toggle('sel', r.dataset.tech === tech));
+  const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  const cyl = (rt, rb, h, m, seg = 32) => new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m);
+  const posAt = (psi, r, y) => new THREE.Vector3(r * Math.cos(psi), y, -r * Math.sin(psi));
+  function textTex(text) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+    const x = c.getContext('2d'); x.fillStyle = '#111827'; x.fillRect(0, 0, 256, 128);
+    x.fillStyle = '#e5e7eb'; x.font = 'bold 40px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 128, 64);
+    return new THREE.CanvasTexture(c);
   }
-
-  // ---- model sinyal ----------------------------------------------------
-  // Sensor diam di posisi atas (−90°). Sudut pola yang berada di bawah sensor:
-  function patternAngle() { return (-Math.PI / 2) - (angle * Math.PI / 180); }
-  function pattern() { return Math.sin(N * patternAngle()); }
-  function noise(a) { return (Math.random() * 2 - 1) * a; }
-
-  function rawSignal() {
-    const p = pattern();
-    const vib = dist.vibration;
-    if (tech === 'optical') {
-      let v = 0.5 + 0.5 * Math.tanh(5 * p);           // cahaya melewati celah
-      if (dist.dust) v = v * 0.42 + noise(0.06);        // cahaya teredam debu
-      if (dist.liquid) v = v * 0.75 + noise(0.05);      // embun menghamburkan cahaya
-      if (vib) {                                        // piringan bergetar
-        v += noise(0.12);
-        if (Math.random() < 0.006) v = 1 - v;           // celah sesaat bergeser dari berkas
-      }
-      return v;
+  function icChip(name, w = 0.5, d = 0.5, n = 4) {
+    const g = new THREE.Group();
+    const top = new THREE.MeshStandardMaterial({ map: textTex(name), roughness: 0.5 });
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, d), [M.chip, M.chip, top, top, M.chip, M.chip]));
+    for (let i = 0; i < n; i++) {
+      const z = -d / 2 + d * (i + 0.5) / n;
+      [-1, 1].forEach(sx => { const p = box(0.12, 0.03, 0.05, M.pin); p.position.set(sx * (w / 2 + 0.05), -0.04, z); g.add(p); });
     }
-    if (tech === 'magnetic') {
-      let v = p;
-      if (dist.magnet) v += 1.15;                       // medan luar menggeser kurva
-      if (vib) v += noise(0.06);
-      return v;
+    return g;
+  }
+
+  let parts = {}, labels = [], exploded = [];
+  const root = new THREE.Group(); scene.add(root);
+  const fxGroup = new THREE.Group(); scene.add(fxGroup);
+  function clearScene() {
+    while (root.children.length) root.remove(root.children[0]);
+    while (fxGroup.children.length) fxGroup.remove(fxGroup.children[0]);
+    labels.forEach(l => l.el.remove()); labels = []; exploded = []; parts = {};
+  }
+  function label(text, obj, off = [0, 0.25, 0], key = false) {
+    const el = document.createElement('div'); el.className = 'lbl' + (key ? ' key' : ''); el.textContent = text; view.appendChild(el);
+    labels.push({ el, obj, off: new THREE.Vector3(...off) });
+  }
+  function ex(obj, dy) { exploded.push({ obj, base: obj.position.clone(), dy }); }
+  function addHousing(r, h, y) {
+    const hs = cyl(r, r, h, M.housing, 64); hs.position.y = y; hs.visible = caseOn; root.add(hs); parts.housing = hs;
+  }
+
+  function build(tech) {
+    clearScene();
+    const rotor = new THREE.Group(); root.add(rotor); parts.rotor = rotor;
+    const motor = cyl(1.35, 1.35, 1.6, M.motor, 48); motor.position.y = -1.35; root.add(motor);
+    const shaft = cyl(0.12, 0.12, 2.4, M.shaft); shaft.position.y = -0.3; rotor.add(shaft);
+    label('Motor DC', motor, [-1.2, 0.2, 0]); ex(motor, -0.6);
+
+    if (tech === 'optical') {
+      rotor.add(cyl(0.35, 0.35, 0.12, M.disc));
+      rotor.add(sector(0.3, R - 0.25, 0, TAU, 0.03, M.disc));
+      for (let k = 0; k < N; k++) { const a0 = TAU * k / N + Math.PI / N; rotor.add(sector(R - 0.25, R + 0.3, a0, a0 + Math.PI / N, 0.03, M.disc)); }
+      const rim = sector(R + 0.3, R + 0.42, 0, TAU, 0.03, M.disc); rotor.add(rim);
+      label('Piringan bercelah (code disc)', rim, [-0.8, 0.2, 1.2], true);
+      const mask = new THREE.Group(); mask.position.y = -0.18; root.add(mask);
+      [PSI_A, PSI_B].forEach(psi => {
+        for (let j = -1; j <= 1; j++) { const a0 = psi + j * TAU / N + Math.PI / N; mask.add(sector(R - 0.2, R + 0.25, a0, a0 + Math.PI / N, 0.02, M.mask)); }
+      });
+      label('Masker / reticle', mask.children[1], [0.6, -0.05, 0.4]); ex(mask, -0.35);
+      const ledG = new THREE.Group(); root.add(ledG);
+      const ledBody = box(0.55, 0.25, 0.45, M.chip); ledBody.position.copy(posAt((PSI_A + PSI_B) / 2, R + 0.02, 0.75)); ledG.add(ledBody);
+      const led = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), new THREE.MeshStandardMaterial({ color: 0xfecaca, emissive: 0xef4444, emissiveIntensity: 1.2 }));
+      led.position.copy(ledBody.position).add(new THREE.Vector3(0, -0.16, 0)); ledG.add(led);
+      label('LED inframerah + lensa', ledBody, [0, 0.25, 0]); ex(ledG, 0.9);
+      const det = new THREE.Group(); root.add(det);
+      const pcb = box(1.6, 0.08, 1.2, M.pcb); pcb.position.copy(posAt(0.1, R, -0.55)); det.add(pcb);
+      parts.pd = [];
+      [PSI_A, PSI_B].forEach((psi, i) => {
+        const pd = box(0.22, 0.1, 0.22, new THREE.MeshStandardMaterial({ color: 0x1e3a8a, emissive: 0x000000 }));
+        pd.position.copy(posAt(psi, R, -0.45)); det.add(pd); parts.pd.push(pd);
+        label(i ? 'Photodiode B' : 'Photodiode A', pd, [i ? 0.5 : -0.4, 0.15, 0.25], true);
+      });
+      const amp = icChip('LM339', 0.42, 0.32, 4); amp.position.copy(posAt(0.1, R + 0.5, -0.43)); det.add(amp);
+      label('Penguat + komparator', amp, [0.4, 0.15, 0]); ex(det, -0.8);
+      parts.beams = [PSI_A, PSI_B].map(psi => {
+        const b = cyl(0.07, 0.07, 1.2, new THREE.MeshBasicMaterial({ color: 0xfca5a5, transparent: true, opacity: 0.6 }), 12);
+        b.position.copy(posAt(psi, R, 0.12)); fxGroup.add(b); return b;
+      });
+      addHousing(2.25, 1.6, 0.25);
+    }
+    if (tech === 'magAxis') {
+      const mag = new THREE.Group(); mag.position.y = 0.9; rotor.add(mag);
+      const nHalf = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 32, 1, false, 0, Math.PI), M.north);
+      const sHalf = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 32, 1, false, Math.PI, Math.PI), M.south);
+      mag.add(nHalf, sHalf);
+      const holder = cyl(0.5, 0.5, 0.2, M.disc); holder.position.y = 0.66; rotor.add(holder);
+      label('Magnet diametral (N merah | S biru)', nHalf, [0, 0.3, 0], true);
+      const brd = new THREE.Group(); brd.position.y = 1.45; root.add(brd);
+      const pcb = box(2.0, 0.08, 1.6, M.pcb); brd.add(pcb);
+      const ic = icChip('AS5600', 0.55, 0.55, 4); ic.position.y = -0.1; ic.rotation.x = Math.PI; brd.add(ic);
+      label('PCB sensor', pcb, [0.8, 0.15, -0.5]);
+      label('IC AS5600 (menghadap magnet)', ic, [0, -0.3, 0.7], true);
+      parts.halls = [];
+      [[0.13, 0], [-0.13, 0], [0, 0.13], [0, -0.13]].forEach(([x, z]) => {
+        const h = box(0.06, 0.02, 0.06, new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.6 }));
+        h.position.set(x, -0.2, z); brd.add(h); parts.halls.push(h);
+      });
+      label('4 elemen Hall', parts.halls[0], [0.7, -0.15, 0.2]);
+      ex(brd, 0.7);
+      parts.fieldArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1.22, 0), 0.9, 0xf87171, 0.2, 0.12); fxGroup.add(parts.fieldArrow);
+      parts.measArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1.36, 0), 0.75, 0xc084fc, 0.18, 0.1); fxGroup.add(parts.measArrow);
+      label('Arah medan nyata (merah)', parts.fieldArrow.cone, [0, 0.12, 0]);
+      label('Arah terbaca IC (ungu)', parts.measArrow.cone, [0, 0.12, 0]);
+      for (let i = 0; i < 5; i++) {
+        const k = (i - 2) * 0.12;
+        const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.42, k, 0), new THREE.Vector3(0, 0.55 + Math.abs(k), 0), new THREE.Vector3(-0.42, k, 0));
+        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(24)), new THREE.LineBasicMaterial({ color: 0xfca5a5, transparent: true, opacity: 0.5 }));
+        line.position.y = 0.9; rotor.add(line);
+      }
+      addHousing(1.6, 1.4, 0.9);
+    }
+    if (tech === 'magRing') {
+      rotor.add(cyl(0.5, 0.5, 0.25, M.disc));
+      const ring = new THREE.Group(); rotor.add(ring);
+      for (let k = 0; k < 2 * N; k++) { const a0 = Math.PI * k / N; ring.add(sector(0.5, R + 0.1, a0, a0 + Math.PI / N, 0.28, k % 2 ? M.south : M.north)); }
+      label('Cincin magnet multipole (N merah, S biru)', ring.children[0], [-0.6, 0.45, 1.0], true);
+      const brd = new THREE.Group(); root.add(brd);
+      const pcb = sector(R + 0.3, R + 1.0, -0.55, 0.75, 0.07, M.pcb); brd.add(pcb);
+      parts.halls = [];
+      [PSI_A, PSI_B].forEach((psi, i) => {
+        const g = new THREE.Group();
+        const bodyM = new THREE.MeshStandardMaterial({ color: 0x111827, emissive: 0x000000 });
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 24, 1, false, 0, Math.PI), bodyM);
+        body.rotation.x = Math.PI / 2; g.add(body);
+        for (let j = -1; j <= 1; j++) { const leg = box(0.03, 0.03, 0.45, M.pin); leg.position.set(j * 0.08, 0, 0.3); g.add(leg); }
+        g.position.copy(posAt(psi, R + 0.3, 0.14)); g.rotation.y = psi + Math.PI / 2; brd.add(g);
+        parts.halls.push(bodyM);
+        label(i ? 'Sensor Hall B' : 'Sensor Hall A', g, [i ? 0.45 : -0.35, 0.25, 0.2], true);
+      });
+      label('PCB encoder motor', pcb, [0.8, 0.2, -0.6]); ex(brd, 0.8);
+      addHousing(2.4, 1.0, 0.1);
     }
     if (tech === 'capacitive') {
-      let v = 0.5 + 0.4 * p;
-      if (dist.liquid) {
-        if (Math.random() < 0.04) liquidGlitch = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.3);
-        liquidGlitch *= 0.93;
-        v += liquidGlitch + noise(0.12);
+      const rot = new THREE.Group(); rotor.add(rot);
+      rot.add(sector(0.3, R + 0.45, 0, TAU, 0.06, M.pcbDark));
+      for (let k = 0; k < N; k++) { const a0 = TAU * k / N; const s = sector(R - 0.4, R + 0.3, a0, a0 + Math.PI / N, 0.02, M.copper); s.position.y = 0.06; rot.add(s); }
+      label('Rotor PCB berpola tembaga', rot.children[1], [-0.8, 0.25, 1.0], true);
+      const st = new THREE.Group(); st.position.y = 0.5; root.add(st);
+      st.add(sector(0.4, R + 0.6, 0, TAU, 0.07, new THREE.MeshStandardMaterial({ color: 0x166534, transparent: true, opacity: 0.55 })));
+      parts.rx = [];
+      [PSI_A, PSI_B].forEach((psi, i) => {
+        const e = sector(R - 0.35, R + 0.25, psi - 0.08, psi + 0.08, 0.02, new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0x000000, metalness: 0.6 }));
+        e.position.y = -0.03; st.add(e); parts.rx.push(e.material);
+        label(i ? 'Elektroda RX cos' : 'Elektroda RX sin', e, [i ? 0.6 : -0.3, -0.25, 0.4], true);
+      });
+      const tx = sector(R + 0.32, R + 0.5, 0, TAU, 0.02, M.copper); tx.position.y = -0.03; st.add(tx);
+      label('Elektroda TX (pemancar)', tx, [-1.6, 0.2, 0.8]);
+      const asic = icChip('ASIC', 0.5, 0.5, 4); asic.position.copy(posAt(Math.PI, 1.1, 0.12)); st.add(asic);
+      label('ASIC demodulator', asic, [0, 0.25, 0]); ex(st, 0.9);
+      parts.efield = [];
+      for (let i = 0; i < 6; i++) {
+        const psi = (i % 2 ? PSI_B : PSI_A) + (Math.floor(i / 2) - 1) * 0.05;
+        const l = cyl(0.012, 0.012, 0.36, new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.5 }), 6);
+        l.position.copy(posAt(psi, R - 0.05, 0.27)); fxGroup.add(l); parts.efield.push(l);
       }
-      if (vib) v += noise(0.04);
-      return v;
+      addHousing(2.35, 1.2, 0.3);
     }
-    // inductive
-    let v = 0.5 + 0.4 * p;
-    if (vib) v += noise(0.03);
-    if (dist.dust || dist.liquid || dist.magnet) v += noise(0.02);
-    return v;
-  }
-
-  function step() {
-    if (rpm > 0) angle = (angle + rpm * 360 / 3600) % 360;
-    const raw = rawSignal();
-    // Komparator dengan histeresis kecil
-    const th = THRESH[tech];
-    const h = (tech === 'magnetic') ? 0.08 : 0.04;
-    let dig = prevDig;
-    if (raw > th + h) dig = 1;
-    else if (raw < th - h) dig = 0;
-    const ideal = pattern() > 0 ? 1 : 0;
-    if (rpm > 0) {
-      if (ideal === 1 && prevIdeal === 0) countIdeal++;
-      if (dig === 1 && prevDig === 0) countRead++;
-      history.push({ raw, dig });
-      if (history.length > maxHistory) history.shift();
-    }
-    prevIdeal = ideal; prevDig = dig;
-    updateMetrics(raw, dig);
-  }
-
-  function updateMetrics(raw, dig) {
-    document.getElementById('rawVal').textContent = raw.toFixed(2);
-    const dv = document.getElementById('digVal');
-    dv.textContent = dig ? 'HIGH' : 'LOW';
-    dv.style.color = dig ? '#22c55e' : '#38bdf8';
-    document.getElementById('countVal').textContent = `${countIdeal} / ${countRead}`;
-    const diff = countRead - countIdeal;
-    const st = document.getElementById('statusVal');
-    const sub = document.getElementById('statusSub');
-    if (Math.abs(diff) <= 1) {
-      st.textContent = 'AMAN'; st.style.color = '#4ade80'; sub.textContent = 'Pulsa sesuai';
-    } else if (diff < 0) {
-      st.textContent = 'PULSA HILANG'; st.style.color = '#f87171'; sub.textContent = `${-diff} pulsa tidak terbaca`;
-    } else {
-      st.textContent = 'PULSA PALSU'; st.style.color = '#fbbf24'; sub.textContent = `${diff} pulsa berlebih`;
-    }
-  }
-
-  // ---- gambar piringan --------------------------------------------------
-  function drawDisc() {
-    const w = disc.width, h = disc.height;
-    dCtx.clearRect(0, 0, w, h);
-    const cx = w / 2, cy = h / 2 + 18, R = 112;
-    dCtx.save();
-    dCtx.translate(cx, cy);
-    dCtx.rotate(angle * Math.PI / 180);
-
-    if (tech === 'optical') {
-      dCtx.beginPath(); dCtx.arc(0, 0, R, 0, Math.PI * 2);
-      dCtx.fillStyle = '#334155'; dCtx.fill();
+    if (tech === 'inductive') {
+      const tgt = new THREE.Group(); rotor.add(tgt);
+      tgt.add(sector(0.3, R - 0.35, 0, TAU, 0.08, M.alu));
+      for (let k = 0; k < N; k++) { const a0 = TAU * k / N; tgt.add(sector(R - 0.36, R + 0.35, a0, a0 + Math.PI / N, 0.08, M.alu)); }
+      label('Target logam bergerigi', tgt.children[1], [-0.8, 0.25, 1.0], true);
+      const st = new THREE.Group(); st.position.y = 0.45; root.add(st);
+      st.add(sector(0.4, R + 0.75, 0, TAU, 0.07, new THREE.MeshStandardMaterial({ color: 0x166534, transparent: true, opacity: 0.5 })));
+      const txc = new THREE.Mesh(new THREE.TorusGeometry(R + 0.55, 0.035, 8, 96), M.copper); txc.rotation.x = Math.PI / 2; txc.position.y = -0.02; st.add(txc);
+      label('Kumparan TX', txc, [-1.6, 0.2, 0.9]);
+      const mkRx = (phase, color) => {
+        const pts = []; for (let i = 0; i <= 400; i++) { const a = TAU * i / 400; const r = R + 0.25 * Math.sin(N * a + phase); pts.push(new THREE.Vector3(r * Math.cos(a), -0.02, -r * Math.sin(a))); }
+        const m = new THREE.LineBasicMaterial({ color }); const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), m); st.add(l); return { l, m };
+      };
+      const rs = mkRx(0, 0xfbbf24), rc = mkRx(Math.PI / 2, 0x22d3ee);
+      parts.rx = [rs.m, rc.m];
+      label('Kumparan RX sin (kuning) / cos (biru)', rs.l, [1.4, -0.3, 1.3], true);
+      const ic = icChip('IPS2200', 0.6, 0.5, 4); ic.position.copy(posAt(Math.PI, 0.9, 0.12)); st.add(ic);
+      label('IC IPS2200', ic, [0, 0.25, 0]); ex(st, 0.9);
+      parts.eddy = [];
       for (let k = 0; k < N; k++) {
-        const a0 = 2 * Math.PI * k / N, a1 = a0 + Math.PI / N;
-        dCtx.beginPath();
-        dCtx.arc(0, 0, R - 8, a0, a1);
-        dCtx.arc(0, 0, R - 36, a1, a0, true);
-        dCtx.closePath();
-        dCtx.fillStyle = '#e2e8f0'; dCtx.fill();
+        const t = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.02, 6, 24), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0 }));
+        t.rotation.x = Math.PI / 2; const a = TAU * k / N + Math.PI / (2 * N); t.position.set((R + 0.05) * Math.cos(a), 0.12, -(R + 0.05) * Math.sin(a)); rotor.add(t); parts.eddy.push(t);
       }
-      if (dist.dust) {
-        dCtx.fillStyle = 'rgba(146, 64, 14, 0.75)';
-        for (let k = 0; k < 70; k++) {
-          const a = (k * 2.39996) % (2 * Math.PI), r = 40 + (k * 37) % 70;
-          dCtx.beginPath(); dCtx.arc(r * Math.cos(a), r * Math.sin(a), 2 + (k % 3), 0, Math.PI * 2); dCtx.fill();
-        }
-      }
-    } else if (tech === 'magnetic') {
-      for (let k = 0; k < 2 * N; k++) {
-        const a0 = Math.PI * k / N, a1 = a0 + Math.PI / N;
-        dCtx.beginPath();
-        dCtx.arc(0, 0, R, a0, a1);
-        dCtx.arc(0, 0, R - 34, a1, a0, true);
-        dCtx.closePath();
-        dCtx.fillStyle = k % 2 === 0 ? '#dc2626' : '#2563eb';
-        dCtx.fill();
-        dCtx.strokeStyle = '#0f172a'; dCtx.lineWidth = 1; dCtx.stroke();
-        const am = (a0 + a1) / 2;
-        dCtx.save();
-        dCtx.translate((R - 17) * Math.cos(am), (R - 17) * Math.sin(am));
-        dCtx.rotate(am + Math.PI / 2);
-        dCtx.fillStyle = 'white'; dCtx.font = 'bold 12px sans-serif'; dCtx.textAlign = 'center';
-        dCtx.fillText(k % 2 === 0 ? 'N' : 'S', 0, 4);
-        dCtx.restore();
-      }
-      dCtx.beginPath(); dCtx.arc(0, 0, R - 34, 0, Math.PI * 2);
-      dCtx.fillStyle = '#1e293b'; dCtx.fill();
-    } else if (tech === 'capacitive') {
-      dCtx.beginPath(); dCtx.arc(0, 0, R, 0, Math.PI * 2);
-      dCtx.fillStyle = '#14532d'; dCtx.fill();
-      dCtx.beginPath();
-      for (let i = 0; i <= 360; i++) {
-        const a = i * Math.PI / 180;
-        const r = R - 24 + 14 * Math.sin(N * a);
-        if (i === 0) dCtx.moveTo(r * Math.cos(a), r * Math.sin(a));
-        else dCtx.lineTo(r * Math.cos(a), r * Math.sin(a));
-      }
-      for (let i = 360; i >= 0; i--) {
-        const a = i * Math.PI / 180;
-        dCtx.lineTo((R - 52) * Math.cos(a), (R - 52) * Math.sin(a));
-      }
-      dCtx.closePath();
-      dCtx.fillStyle = '#d97706'; dCtx.fill();
-    } else {
-      dCtx.beginPath();
-      for (let i = 0; i <= 720; i++) {
-        const a = i * Math.PI / 360;
-        const r = Math.sin(N * a) > 0 ? R : R - 26;
-        if (i === 0) dCtx.moveTo(r * Math.cos(a), r * Math.sin(a));
-        else dCtx.lineTo(r * Math.cos(a), r * Math.sin(a));
-      }
-      dCtx.closePath();
-      const g = dCtx.createRadialGradient(0, 0, 20, 0, 0, R);
-      g.addColorStop(0, '#94a3b8'); g.addColorStop(1, '#cbd5e1');
-      dCtx.fillStyle = g; dCtx.fill();
+      label('Arus pusar (eddy current)', parts.eddy[0], [0.3, 0.3, 0]);
+      addHousing(2.5, 1.2, 0.3);
     }
+    buildFx();
+  }
 
-    // poros
-    dCtx.beginPath(); dCtx.arc(0, 0, 18, 0, Math.PI * 2);
-    dCtx.fillStyle = '#64748b'; dCtx.fill();
-    dCtx.strokeStyle = '#38bdf8'; dCtx.lineWidth = 3;
-    dCtx.beginPath(); dCtx.moveTo(0, 0); dCtx.lineTo(0, -16); dCtx.stroke();
-    dCtx.restore();
+  function buildFx() {
+    const dustG = new THREE.BufferGeometry(); const pts = [];
+    for (let i = 0; i < 260; i++) { const a = Math.random() * TAU, r = 0.6 + Math.random() * 1.6; pts.push(r * Math.cos(a), 0.05 + Math.random() * 0.12, -r * Math.sin(a)); }
+    dustG.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    parts.dust = new THREE.Points(dustG, new THREE.PointsMaterial({ color: 0xa16207, size: 0.06 })); fxGroup.add(parts.dust);
+    parts.extMag = new THREE.Group();
+    const a = box(0.5, 0.35, 0.35, M.north); a.position.x = -0.25; const b = box(0.5, 0.35, 0.35, M.south); b.position.x = 0.25;
+    parts.extMag.add(a, b); parts.extMag.position.set(1.8, 1.0, 1.4); fxGroup.add(parts.extMag);
+    parts.drops = new THREE.Group();
+    for (let i = 0; i < 9; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(0.06 + Math.random() * 0.06, 12, 8), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 })); d.position.copy(posAt(PSI_A + (Math.random() - 0.5) * 0.6, R + (Math.random() - 0.5) * 0.4, 0.15 + Math.random() * 0.2)); parts.drops.add(d); }
+    fxGroup.add(parts.drops);
+    updateFxVisibility();
+  }
+  function updateFxVisibility() {
+    if (!parts.dust) return;
+    parts.dust.visible = dist.dust; parts.extMag.visible = dist.magnet; parts.drops.visible = dist.liquid;
+  }
 
-    if (dist.liquid) {
-      dCtx.fillStyle = 'rgba(56, 189, 248, 0.35)';
-      [[cx - 40, cy - R + 20, 10], [cx + 30, cy - R + 30, 8], [cx - 5, cy - R + 8, 7]].forEach(([x, y, r]) => {
-        dCtx.beginPath(); dCtx.arc(x, y, r, 0, Math.PI * 2); dCtx.fill();
+  // ---------- model sinyal ----------
+  let tech = 'optical', rpm = 8, theta = 0, expl = 0, caseOn = false, lblOn = true;
+  const dist = { dust: false, magnet: false, liquid: false, vibration: false };
+  let hist = [], count = 0, prevState = '00', dirSign = 1, offset = 0, elecAcc = null, prevElec = 0, glitch = 0, dA = 0, dB = 0;
+  const HMAX = 420;
+  const rnd = a => (Math.random() * 2 - 1) * a;
+  const wrap = a => ((a + Math.PI) % TAU + TAU) % TAU - Math.PI;
+
+  function rawSignals() {
+    const xA = N * (PSI_A - theta), xB = N * (PSI_B - theta), vib = dist.vibration;
+    let a, b;
+    if (tech === 'optical') {
+      a = 0.5 + 0.5 * Math.tanh(4 * Math.sin(xA)); b = 0.5 + 0.5 * Math.tanh(4 * Math.sin(xB));
+      if (dist.dust) { a = a * 0.42 + rnd(0.05); b = b * 0.42 + rnd(0.05); }
+      if (dist.liquid) { a = a * 0.7 + rnd(0.06); b = b * 0.7 + rnd(0.06); }
+      if (vib) { a += rnd(0.1); b += rnd(0.1); if (Math.random() < 0.006) a = 1 - a; }
+    } else if (tech === 'magAxis') {
+      a = Math.cos(theta); b = Math.sin(theta);
+      if (dist.magnet) { a += 0.55; b += 0.2; }
+      if (vib) { a += rnd(0.02); b += rnd(0.02); }
+    } else if (tech === 'magRing') {
+      a = Math.sin(xA); b = Math.sin(xB);
+      if (dist.magnet) { a += 1.1; b += 1.1; }
+      if (vib) { a += rnd(0.05); b += rnd(0.05); }
+    } else if (tech === 'capacitive') {
+      a = Math.sin(xA); b = Math.cos(xA);
+      if (dist.liquid) { if (Math.random() < 0.03) glitch = (Math.random() < 0.5 ? -1 : 1) * (0.8 + Math.random() * 0.8); glitch *= 0.92; a += glitch + rnd(0.15); b -= glitch * 0.8 + rnd(0.15); }
+      if (vib) { a += rnd(0.03); b += rnd(0.03); }
+    } else {
+      a = Math.sin(xA); b = Math.cos(xA);
+      if (vib) { a += rnd(0.02); b += rnd(0.02); }
+      if (dist.dust || dist.liquid || dist.magnet) { a += rnd(0.015); b += rnd(0.015); }
+    }
+    return { a, b };
+  }
+  const QD = { '00': { '01': 1, '10': -1 }, '01': { '11': 1, '00': -1 }, '11': { '10': 1, '01': -1 }, '10': { '00': 1, '11': -1 } };
+  function digital(v, prev) {
+    const th = tech === 'optical' ? 0.5 : 0, h = tech === 'optical' ? 0.05 : 0.1;
+    if (v > th + h) return 1; if (v < th - h) return 0; return prev;
+  }
+  function idealState(th) {
+    return '' + (Math.sin(N * (PSI_A - th)) > 0 ? 1 : 0) + (Math.sin(N * (PSI_B - th)) > 0 ? 1 : 0);
+  }
+  function resetMeasure() {
+    hist = []; count = 0; glitch = 0; elecAcc = null;
+    const s = rawSignals(); dA = digital(s.a, 0); dB = digital(s.b, 0); prevState = '' + dA + dB;
+    let c = 0, prev = idealState(theta);
+    for (let i = 1; i < 300; i++) { const st = idealState(theta + i * 0.002); if (st !== prev) { c += (QD[prev] && QD[prev][st]) || 0; prev = st; } }
+    dirSign = c >= 0 ? 1 : -1;
+    offset = theta;
+  }
+  function measure(s) {
+    if (T[tech].incremental) {
+      dA = digital(s.a, dA); dB = digital(s.b, dB);
+      const st = '' + dA + dB;
+      if (st !== prevState) { count += (QD[prevState] && QD[prevState][st]) || 0; prevState = st; }
+      return offset + dirSign * count * TAU / (4 * N);
+    }
+    if (tech === 'magAxis') return theta + wrap(Math.atan2(s.b, s.a) - theta);
+    const e = Math.atan2(s.a, s.b);
+    if (elecAcc === null) { elecAcc = N * (PSI_A - theta); prevElec = e; }
+    elecAcc += wrap(e - prevElec); prevElec = e;
+    dA = s.a > 0 ? 1 : 0; dB = s.b > 0 ? 1 : 0;
+    return PSI_A - elecAcc / N;
+  }
+
+  // ---------- UI ----------
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(o => o.classList.toggle('active', o === b));
+    tech = b.dataset.t; build(tech); resetMeasure(); updateInfo();
+    controls.target.set(0, tech === 'magAxis' ? 0.35 : -0.15, 0);
+  }));
+  document.querySelectorAll('[data-d]').forEach(b => b.addEventListener('click', () => {
+    dist[b.dataset.d] = !dist[b.dataset.d]; b.classList.toggle('on', dist[b.dataset.d]); updateFxVisibility(); resetMeasure();
+  }));
+  $('rpm').addEventListener('input', e => { rpm = +e.target.value; $('rpmV').textContent = rpm; });
+  $('exp').addEventListener('input', e => { expl = +e.target.value / 100; $('expV').textContent = e.target.value; });
+  $('btnLbl').addEventListener('click', e => { lblOn = !lblOn; e.target.classList.toggle('on', lblOn); });
+  $('btnCase').addEventListener('click', e => { caseOn = !caseOn; e.target.classList.toggle('on', caseOn); if (parts.housing) parts.housing.visible = caseOn; });
+
+  function updateInfo() {
+    $('infoP').innerHTML = T[tech].principle; $('infoA').innerHTML = T[tech].analogy;
+    document.querySelectorAll('#cmp tr').forEach(r => r.classList.toggle('sel', r.dataset.t === tech));
+    const sc = T[tech].scope;
+    $('legend').innerHTML = `<b style="color:#22c55e">— ${sc[0]}</b> &nbsp; <b style="color:#f59e0b">— ${sc[1]}</b> &nbsp; <b style="color:#c084fc">— ${sc[2]}</b>`;
+    $('chain').innerHTML = '<h3>Alur sinyal: dari sensor ke kontroler</h3>' + T[tech].chain.map((c, i) =>
+      `${i ? '<div class="arrow">▼</div>' : ''}<div class="stage"><div class="n">${i + 1}. ${c[0]}</div><div class="d">${c[1]}</div><div class="v" id="cv${i}"></div></div>`).join('');
+    $('mRes').textContent = T[tech].incremental ? `resolusi X4: ${fmt(360 / (4 * N), 2)}°` : 'resolusi: interpolasi halus';
+  }
+
+  // ---------- osiloskop ----------
+  const sc = $('scope'), sx = sc.getContext('2d');
+  function drawScope() {
+    const w = sc.width, h = sc.height; sx.clearRect(0, 0, w, h);
+    const x0 = 10, dx = (w - x0) / HMAX;
+    const bands = [[10, 80], [90, 160], [170, 240]];
+    sx.strokeStyle = '#1e293b'; sx.lineWidth = 1;
+    bands.forEach(([a, b]) => { sx.beginPath(); sx.moveTo(0, (a + b) / 2); sx.lineTo(w, (a + b) / 2); sx.stroke(); });
+    const isOpt = tech === 'optical';
+    const map = (v, [a, b]) => { const lo = isOpt ? 0 : -1.8, hi = isOpt ? 1 : 1.8; const t = (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo); return b - t * (b - a); };
+    const line = (f, col, band, wd = 2) => { sx.beginPath(); sx.strokeStyle = col; sx.lineWidth = wd; hist.forEach((p, i) => { const y = f(p, band); i ? sx.lineTo(x0 + i * dx, y) : sx.moveTo(x0, y); }); sx.stroke(); };
+    line((p, b) => map(p.a, b), '#22c55e', bands[0]);
+    line((p, b) => map(p.b, b), '#f59e0b', bands[1]);
+    if (T[tech].incremental) {
+      line((p, [a, b]) => p.dA ? a + 3 : (a + b) / 2 - 3, '#22c55e', bands[2], 1.6);
+      line((p, [a, b]) => p.dB ? (a + b) / 2 + 3 : b - 3, '#f59e0b', bands[2], 1.6);
+    } else {
+      line((p, [a, b]) => b - (((p.t % TAU) + TAU) % TAU) / TAU * (b - a), 'rgba(148,163,184,0.6)', bands[2], 1);
+      line((p, [a, b]) => b - (((p.m % TAU) + TAU) % TAU) / TAU * (b - a), '#c084fc', bands[2]);
+    }
+    if (!rpm) { sx.fillStyle = '#64748b'; sx.font = '13px sans-serif'; sx.fillText('Motor diam: geser kecepatan untuk memutar poros', w / 2 - 150, 128); }
+  }
+
+  // ---------- loop animasi ----------
+  const tmpV = new THREE.Vector3();
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    theta += rpm * TAU / 60 * dt;
+    const s = rawSignals();
+    const meas = measure(s);
+    if (rpm) { hist.push({ a: s.a, b: s.b, dA, dB, m: meas, t: theta }); if (hist.length > HMAX) hist.shift(); }
+
+    if (parts.rotor) {
+      parts.rotor.rotation.y = theta;
+      parts.rotor.position.x = dist.vibration ? rnd(0.025) : 0;
+      parts.rotor.position.z = dist.vibration ? rnd(0.025) : 0;
+    }
+    exploded.forEach(e => { e.obj.position.y = e.base.y + e.dy * expl; });
+    if (tech === 'optical' && parts.beams) {
+      [s.a, s.b].forEach((v, i) => {
+        parts.beams[i].material.opacity = Math.max(0.03, Math.min(1, v)) * 0.75;
+        parts.beams[i].scale.y = 1 + expl * 1.4;
+        parts.pd[i].material.emissive.setHex(v > 0.5 ? 0x22c55e : 0x000000);
       });
     }
-
-    drawSensorHead(cx, cy, R);
-
-    if (dist.magnet) {
-      dCtx.fillStyle = '#dc2626'; dCtx.fillRect(w - 46, 14, 34, 22);
-      dCtx.fillStyle = '#2563eb'; dCtx.fillRect(w - 46, 36, 34, 22);
-      dCtx.fillStyle = 'white'; dCtx.font = 'bold 11px sans-serif';
-      dCtx.fillText('N', w - 33, 30); dCtx.fillText('S', w - 33, 52);
-      dCtx.strokeStyle = 'rgba(248, 113, 113, 0.7)'; dCtx.setLineDash([4, 4]); dCtx.lineWidth = 1.5;
-      dCtx.beginPath(); dCtx.moveTo(w - 46, 36); dCtx.quadraticCurveTo(cx + 40, 20, cx + 12, 40); dCtx.stroke();
-      dCtx.setLineDash([]);
+    if (tech === 'magAxis' && parts.fieldArrow) {
+      parts.fieldArrow.setDirection(tmpV.set(Math.cos(theta), 0, -Math.sin(theta)));
+      parts.fieldArrow.position.y = 1.22 + 0.5 * expl;
+      parts.measArrow.setDirection(tmpV.set(s.a, 0, -s.b).normalize());
+      parts.measArrow.position.y = 1.36 + 0.7 * expl;
+      parts.halls.forEach((h, i) => h.material.emissiveIntensity = 0.25 + 0.7 * Math.abs([s.a, s.a, s.b, s.b][i]));
     }
-    if (dist.vibration) {
-      dCtx.strokeStyle = '#fbbf24'; dCtx.lineWidth = 2;
-      for (const s of [-1, 1]) {
-        dCtx.beginPath();
-        for (let k = 0; k < 4; k++) dCtx.arc(cx + s * (R + 12), cy, 6 + k * 5, s > 0 ? -0.6 : Math.PI - 0.6, s > 0 ? 0.6 : Math.PI + 0.6);
-        dCtx.stroke();
-      }
+    if (tech === 'magRing' && parts.halls) {
+      parts.halls[0].emissive.setHex(dA ? 0xdc2626 : 0x1d4ed8); parts.halls[1].emissive.setHex(dB ? 0xdc2626 : 0x1d4ed8);
+      parts.halls.forEach(m => m.emissiveIntensity = 0.7);
     }
-  }
-
-  function drawSensorHead(cx, cy, R) {
-    const topY = cy - R;
-    dCtx.font = 'bold 11px sans-serif';
-    dCtx.textAlign = 'center';
-    if (tech === 'optical') {
-      const lit = rawSignal() > 0.5;
-      const sx = cx;
-      dCtx.fillStyle = '#facc15';
-      dCtx.beginPath(); dCtx.arc(sx, topY - 18, 8, 0, Math.PI * 2); dCtx.fill();
-      dCtx.fillStyle = '#e2e8f0'; dCtx.textAlign = 'left';
-      dCtx.fillText('LED → celah → photodiode', 10, 16);
-      dCtx.textAlign = 'center';
-      if (pattern() > 0) {
-        dCtx.strokeStyle = dist.dust ? 'rgba(250, 204, 21, 0.35)' : 'rgba(250, 204, 21, 0.9)';
-        dCtx.lineWidth = 6;
-        dCtx.beginPath(); dCtx.moveTo(sx, topY - 10); dCtx.lineTo(sx, topY + 42); dCtx.stroke();
-      }
-      dCtx.fillStyle = lit ? '#22c55e' : '#475569';
-      dCtx.fillRect(sx - 9, topY + 42, 18, 10);
-    } else if (tech === 'magnetic') {
-      const b = pattern();
-      dCtx.fillStyle = '#111827'; dCtx.strokeStyle = '#94a3b8'; dCtx.lineWidth = 1.5;
-      dCtx.fillRect(cx - 14, topY - 30, 28, 18); dCtx.strokeRect(cx - 14, topY - 30, 28, 18);
-      dCtx.fillStyle = '#e2e8f0'; dCtx.fillText('Hall', cx, topY - 17);
-      dCtx.strokeStyle = b > 0 ? '#f87171' : '#60a5fa'; dCtx.lineWidth = 3;
-      const dir = b > 0 ? -1 : 1;
-      dCtx.beginPath(); dCtx.moveTo(cx, topY - 6); dCtx.lineTo(cx, topY + 6 * dir + 2);
-      dCtx.stroke();
-      dCtx.fillStyle = '#e2e8f0'; dCtx.fillText(b > 0 ? 'Medan N' : 'Medan S', cx + 48, topY - 17);
-    } else if (tech === 'capacitive') {
-      dCtx.fillStyle = '#64748b';
-      dCtx.fillRect(cx - 40, topY - 26, 36, 10);
-      dCtx.fillRect(cx + 4, topY - 26, 36, 10);
-      dCtx.fillStyle = '#e2e8f0';
-      dCtx.fillText('TX', cx - 22, topY - 31); dCtx.fillText('RX', cx + 22, topY - 31);
-      dCtx.strokeStyle = 'rgba(56, 189, 248, 0.6)'; dCtx.setLineDash([3, 3]); dCtx.lineWidth = 1.5;
-      for (let k = -2; k <= 2; k++) {
-        dCtx.beginPath(); dCtx.moveTo(cx + k * 8, topY - 16); dCtx.lineTo(cx + k * 8, topY + 22); dCtx.stroke();
-      }
-      dCtx.setLineDash([]);
-    } else {
-      dCtx.strokeStyle = '#f59e0b'; dCtx.lineWidth = 2;
-      for (let k = 0; k < 3; k++) {
-        dCtx.strokeRect(cx - 34 + k * 5, topY - 34 + k * 5, 68 - k * 10, 22 - k * 10);
-      }
-      dCtx.fillStyle = '#e2e8f0'; dCtx.fillText('Kumparan PCB', cx, topY - 40);
-      if (pattern() > 0) {
-        dCtx.strokeStyle = '#38bdf8'; dCtx.lineWidth = 1.5;
-        for (let k = 0; k < 2; k++) {
-          dCtx.beginPath(); dCtx.ellipse(cx, topY + 12, 10 + k * 7, 4 + k * 3, 0, 0, Math.PI * 2); dCtx.stroke();
-        }
-        dCtx.fillStyle = '#7dd3fc'; dCtx.fillText('arus pusar', cx + 56, topY + 16);
-      }
+    if (tech === 'capacitive' && parts.rx) {
+      [s.a, s.b].forEach((v, i) => parts.rx[i].emissive.setHex(v > 0 ? 0x854d0e : 0x000000));
+      parts.efield.forEach((l, i) => { l.material.opacity = 0.1 + 0.6 * Math.max(0, i % 2 ? s.b : s.a); l.position.y = 0.27 + 0.45 * expl; l.scale.y = 1 + expl * 2.5; });
     }
-  }
+    if (tech === 'inductive' && parts.eddy) {
+      parts.eddy.forEach(t => { t.getWorldPosition(tmpV); const psi = Math.atan2(-tmpV.z, tmpV.x); const near = Math.abs(wrap(psi - PSI_A)) < 0.3 || Math.abs(wrap(psi - PSI_B)) < 0.3; t.material.opacity = near ? 0.9 : 0.12; });
+      parts.rx[0].color.setHex(s.a > 0 ? 0xfde047 : 0xa16207); parts.rx[1].color.setHex(s.b > 0 ? 0x67e8f9 : 0x0e7490);
+    }
+    if (parts.extMag && dist.magnet) parts.extMag.rotation.y += dt;
 
-  // ---- gambar osiloskop -------------------------------------------------
-  function drawScope() {
-    const w = scope.width, h = scope.height;
-    sCtx.clearRect(0, 0, w, h);
-    const x0 = 70, dx = (w - x0 - 10) / maxHistory;
-    const [lo, hi] = RAW_RANGE[tech];
-    const rawTop = 22, rawBot = 170;
-    const mapRaw = v => rawBot - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * (rawBot - rawTop);
+    const trueDeg = theta * 180 / Math.PI, measDeg = meas * 180 / Math.PI;
+    const err = wrap(meas - theta) * 180 / Math.PI;
+    const lim = T[tech].incremental ? 360 / (4 * N) + 1 : 3;
+    const ok = Math.abs(err) <= lim;
+    $('mTrue').textContent = fmt(((trueDeg % 360) + 360) % 360) + '°';
+    $('mMeas').textContent = fmt(((measDeg % 360) + 360) % 360) + '°';
+    $('mErr').textContent = fmt(err) + '°';
+    $('mStat').textContent = ok ? 'AKURAT' : 'SALAH BACA'; $('mStat').style.color = ok ? '#4ade80' : '#f87171';
+    $('mStatS').textContent = ok ? 'sinyal bersih' : (T[tech].incremental ? 'pulsa hilang / palsu' : 'sudut melenceng');
+    const st = { a: s.a, b: s.b, dA, dB, count: dirSign * count, trueDeg, measDeg, ok };
+    T[tech].chain.forEach((c, i) => { const el = document.getElementById('cv' + i); if (el) el.textContent = c[2](st); });
 
-    sCtx.strokeStyle = '#1e293b'; sCtx.lineWidth = 1;
-    for (let y = 20; y < h; y += 40) { sCtx.beginPath(); sCtx.moveTo(x0, y); sCtx.lineTo(w, y); sCtx.stroke(); }
-
-    sCtx.font = 'bold 12px sans-serif';
-    sCtx.fillStyle = '#c084fc'; sCtx.fillText('Sinyal', 10, 90); sCtx.fillText('mentah', 10, 105);
-    sCtx.fillStyle = '#22c55e'; sCtx.fillText('Digital', 10, 245);
-
-    const ty = mapRaw(THRESH[tech]);
-    sCtx.strokeStyle = '#f59e0b'; sCtx.setLineDash([6, 5]); sCtx.lineWidth = 1.5;
-    sCtx.beginPath(); sCtx.moveTo(x0, ty); sCtx.lineTo(w - 10, ty); sCtx.stroke();
-    sCtx.setLineDash([]);
-    sCtx.fillStyle = '#f59e0b'; sCtx.font = '11px sans-serif'; sCtx.fillText('ambang', w - 58, ty - 5);
-
-    sCtx.beginPath(); sCtx.strokeStyle = '#c084fc'; sCtx.lineWidth = 2;
-    history.forEach((s, i) => {
-      const x = x0 + i * dx, y = mapRaw(s.raw);
-      if (i === 0) sCtx.moveTo(x, y); else sCtx.lineTo(x, y);
+    labels.forEach(l => {
+      if (!lblOn) { l.el.style.display = 'none'; return; }
+      l.obj.getWorldPosition(tmpV); tmpV.add(l.off); tmpV.project(camera);
+      if (tmpV.z > 1) { l.el.style.display = 'none'; return; }
+      l.el.style.display = 'block';
+      l.el.style.left = ((tmpV.x + 1) / 2 * view.clientWidth) + 'px';
+      l.el.style.top = ((1 - tmpV.y) / 2 * view.clientHeight) + 'px';
     });
-    sCtx.stroke();
 
-    const dHigh = 205, dLow = 275;
-    sCtx.beginPath(); sCtx.strokeStyle = '#22c55e'; sCtx.lineWidth = 2.5;
-    history.forEach((s, i) => {
-      const x = x0 + i * dx, y = s.dig ? dHigh : dLow;
-      if (i === 0) sCtx.moveTo(x, y);
-      else { sCtx.lineTo(x, history[i - 1].dig ? dHigh : dLow); sCtx.lineTo(x, y); }
-    });
-    sCtx.stroke();
-
-    if (rpm === 0) {
-      sCtx.fillStyle = '#94a3b8'; sCtx.font = '13px sans-serif';
-      sCtx.fillText('Motor berhenti. Geser kecepatan untuk memutar piringan.', x0 + 10, 140);
-    }
-  }
-
-  function animate() {
-    step();
-    drawDisc();
+    controls.update();
+    renderer.render(scene, camera);
     drawScope();
-    requestAnimationFrame(animate);
+    requestAnimationFrame(frame);
   }
-
-  updateInfo();
-  animate();
+  function resize() {
+    const w = view.clientWidth, h = view.clientHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  build(tech); resetMeasure(); updateInfo(); resize();
+  requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>
