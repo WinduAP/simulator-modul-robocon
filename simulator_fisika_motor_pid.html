@@ -90,8 +90,18 @@
       background: var(--card); border: 1px solid #334155;
       border-radius: 8px; padding: 10px 12px; margin-top: 12px;
     }
-    .chart canvas { width: 100%; height: auto; display: block; }
-    .legend { font-size: 0.78rem; color: var(--muted); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 16px; }
+    .chart-bar {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 8px; margin-bottom: 8px; padding-bottom: 7px; border-bottom: 1px solid #1e293b;
+      font-size: 0.79rem;
+    }
+    .chart-metrics { display: flex; flex-wrap: wrap; gap: 10px; }
+    .cm-badge {
+      background: #0f172a; border: 1px solid #334155; border-radius: 5px;
+      padding: 3px 8px; font-family: Consolas, monospace; color: #e2e8f0;
+    }
+    .chart canvas { width: 100%; height: auto; display: block; cursor: crosshair; }
+    .legend { font-size: 0.78rem; color: var(--muted); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
 
     .info { display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px; margin-top: 12px; }
     @media (max-width: 760px) { .info { grid-template-columns: 1fr; } }
@@ -121,20 +131,20 @@
 
   <div class="controls">
     <div class="cg">
-      <label>Target ωref: <b id="refVal">1000 RPM</b></label>
-      <input type="range" id="refSlider" min="400" max="1400" step="50" value="1000">
+      <label>Target ωref (0–1500): <b id="refVal">1000 RPM</b></label>
+      <input type="range" id="refSlider" min="0" max="1500" step="25" value="1000">
     </div>
     <div class="cg">
       <label>Gain P (Kp): <b id="kpVal">0,22</b></label>
-      <input type="range" id="kpSlider" min="0.04" max="0.50" step="0.02" value="0.22">
+      <input type="range" id="kpSlider" min="0.00" max="0.60" step="0.02" value="0.22">
     </div>
     <div class="cg">
       <label>Gain I (Ki): <b id="kiVal">0,45</b></label>
-      <input type="range" id="kiSlider" min="0.00" max="1.20" step="0.05" value="0.45">
+      <input type="range" id="kiSlider" min="0.00" max="1.50" step="0.05" value="0.45">
     </div>
     <div class="cg">
       <label>Gain D (Kd): <b id="kdVal">0,008</b></label>
-      <input type="range" id="kdSlider" min="0.000" max="0.030" step="0.002" value="0.008">
+      <input type="range" id="kdSlider" min="0.000" max="0.040" step="0.002" value="0.008">
     </div>
     <div class="cg">
       <label>Beban Rem: <b id="loadVal">0,00 Nm</b></label>
@@ -149,7 +159,7 @@
   <div class="main">
     <div class="view3d" id="view">
       <div class="top-bar">
-        <button class="btn on" id="btnLbl">Label 3D</button>
+        <button class="btn on" id="btnLbl">Label 3D (Diam)</button>
         <button class="btn on" id="btnHousing">Buka Rumah Motor</button>
         <button class="btn" id="btnCam">Reset Kamera</button>
       </div>
@@ -189,13 +199,25 @@
   <div class="status" id="statusBox"></div>
 
   <div class="chart">
-    <canvas id="chartCanvas" width="1120" height="220"></canvas>
+    <div class="chart-bar">
+      <strong style="color:#38bdf8;">📈 Grafik Tuning & Telemetri Real-Time (Arahkan Kursor ke Grafik untuk Baca Angka Detail)</strong>
+      <div class="chart-metrics">
+        <span class="cm-badge">Target ωref: <b id="cmRef" style="color:#cbd5e1">1000 RPM</b></span>
+        <span class="cm-badge">Aktual ω: <b id="cmAct" style="color:#22c55e">0 RPM</b></span>
+        <span class="cm-badge">Error (ess): <b id="cmErr" style="color:#38bdf8">1000 RPM</b></span>
+        <span class="cm-badge">Puncak (Peak): <b id="cmPeak" style="color:#fbbf24">0 RPM (Overshoot 0,0%)</b></span>
+      </div>
+    </div>
+    <canvas id="chartCanvas" width="1120" height="260"></canvas>
     <div class="legend">
-      <span><b style="color:#94a3b8">- - - Target ωref (RPM)</b></span>
-      <span><b style="color:#22c55e">━━━ Kecepatan Aktual ω (RPM)</b></span>
-      <span><b style="color:#f59e0b">━━━ Tegangan PWM ea (Volt)</b></span>
-      <span><b style="color:#c084fc">━━━ Back-EMF eb (Volt)</b></span>
-      <span><b style="color:#ef4444">━━━ Arus Jangkar ia (Ampere)</b></span>
+      <div style="display:flex; flex-wrap:wrap; gap:14px;">
+        <span><b style="color:#94a3b8">- - - Target ωref (Sumbu Kiri: 0–1600 RPM)</b></span>
+        <span><b style="color:#22c55e">━━━ Kecepatan Aktual ω (Sumbu Kiri: 0–1600 RPM)</b></span>
+        <span><b style="color:#f59e0b">━━━ Tegangan PWM ea (Sumbu Kanan: 0–24 V)</b></span>
+        <span><b style="color:#c084fc">━━━ Back-EMF eb (Sumbu Kanan: 0–24 V)</b></span>
+        <span><b style="color:#ef4444">━━━ Arus Jangkar ia (Sumbu Kanan: 0–8 A)</b></span>
+      </div>
+      <span style="color:#64748b">Sumbu Bawah: Waktu (detik)</span>
     </div>
   </div>
 
@@ -559,8 +581,12 @@
     syncUI();
   });
 
+  let simTime = 0;
+  let peakW = 0;
+  let lastRefForPeak = wRef;
+
   $('btnReset').addEventListener('click', () => {
-    wActual = 0; integErr = 0; dWFiltered = 0; hist.length = 0;
+    wActual = 0; integErr = 0; dWFiltered = 0; peakW = 0; simTime = 0; hist.length = 0;
   });
 
   $('btnLbl').addEventListener('click', e => {
@@ -586,17 +612,24 @@
     const Ki = parseFloat(kiSlider.value);
     const Kd = parseFloat(kdSlider.value);
 
+    if (wRef !== lastRefForPeak) {
+      peakW = wActual;
+      lastRefForPeak = wRef;
+    }
+
     const err = wRef - wActual;
 
-    if (Ki > 0) {
+    if (Ki > 0 && wRef > 0) {
       integErr += err * dt;
       integErr = Math.max(-60, Math.min(60, integErr));
+    } else if (wRef === 0) {
+      integErr = 0;
     } else {
       integErr = 0;
     }
 
     // Sinyal kontrol tegangan jangkar ea (0 - 24 V) dengan Derivative on Measurement terfilter
-    ea = Kp * err + Ki * integErr - Kd * dWFiltered;
+    ea = wRef === 0 && err <= 0 ? 0 : (Kp * err + Ki * integErr - Kd * dWFiltered);
     ea = Math.max(0, Math.min(24.0, ea));
 
     // Back-EMF dan Arus Jangkar
@@ -605,40 +638,92 @@
 
     // Torsi Motor dan Hukum II Newton Rotasi
     torque = Kt * ia;
-    const netTorque = torque - (b0 * wActual) - loadTorque;
+    const coulombDrag = wActual > 0.5 ? 0.004 : 0; // gesekan statis kecil agar berhenti bersih di 0 RPM
+    const netTorque = torque - (b0 * wActual) - coulombDrag - (wActual > 0 ? loadTorque : 0);
     const dw_dt = (netTorque / J0) * 180.0; // skala percepatan RPM/s
 
     // Low-pass filter untuk laju perubahan kecepatan (mencegah derau/chattering pada suku D)
     dWFiltered = 0.92 * dWFiltered + 0.08 * dw_dt;
 
     wActual = Math.max(0, wActual + dw_dt * dt);
+    if (wRef === 0 && wActual < 0.8 && ea === 0) {
+      wActual = 0;
+      dWFiltered = 0;
+    }
+    if (wActual > peakW) peakW = wActual;
+
     shaftAngle += (wActual * Math.PI * 2 / 60) * dt * 0.035; // diperlambat 30x agar visual 3D jelas
+    simTime += dt;
   }
 
-  // ---------- Grafik Telemetri 2D Multi-Kanal ----------
+  // ---------- Grafik Telemetri 2D Multi-Kanal Lengkap dengan Angka & Kursor ----------
   const hist = [];
-  const HMAX = 480;
+  const HMAX = 480; // ~8 detik riwayat pada 60 fps
   const cv = $('chartCanvas'), cx = cv.getContext('2d');
+  let hoverIdx = -1;
+
+  cv.addEventListener('mousemove', e => {
+    const rect = cv.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (cv.width / rect.width);
+    const x0 = 68, x1 = cv.width - 96;
+    if (mx < x0 || mx > x1 || hist.length < 2) {
+      hoverIdx = -1;
+      return;
+    }
+    const ratio = (mx - x0) / (x1 - x0);
+    const idx = Math.round(ratio * (HMAX - 1));
+    hoverIdx = Math.max(0, Math.min(hist.length - 1, idx));
+  });
+  cv.addEventListener('mouseleave', () => { hoverIdx = -1; });
 
   function drawChart() {
     const w = cv.width, h = cv.height;
-    const x0 = 56, x1 = w - 18, y0 = 16, y1 = h - 24;
+    const x0 = 68, x1 = w - 96, y0 = 18, y1 = h - 30;
     const pw = x1 - x0, ph = y1 - y0;
 
     cx.clearRect(0, 0, w, h);
 
-    // Garis Grid & Skala
-    cx.strokeStyle = '#1e293b';
+    // 1. Garis Grid Horizontal + Angka Sumbu Kiri (RPM) & Sumbu Kanan (Volt & Ampere)
     cx.lineWidth = 1;
-    cx.fillStyle = '#64748b';
-    cx.font = '11px sans-serif';
+    cx.font = '11px Consolas, monospace';
     for (let k = 0; k <= 4; k++) {
       const y = y0 + (ph * k) / 4;
+      cx.strokeStyle = k === 4 ? '#334155' : '#1e293b';
       cx.beginPath(); cx.moveTo(x0, y); cx.lineTo(x1, y); cx.stroke();
+
+      // Sumbu Kiri: Kecepatan (0 - 1600 RPM)
       const rpmTick = Math.round(1600 * (1 - k / 4));
-      cx.fillText(`${rpmTick}`, 14, y + 4);
+      cx.fillStyle = '#4ade80';
+      cx.textAlign = 'right';
+      cx.fillText(`${rpmTick} RPM`, x0 - 6, y + 4);
+
+      // Sumbu Kanan: Tegangan (0 - 24 V) & Arus (0 - 8 A)
+      const vTick = Math.round(24 * (1 - k / 4));
+      const aTick = Math.round(8 * (1 - k / 4));
+      cx.fillStyle = '#fbbf24';
+      cx.textAlign = 'left';
+      cx.fillText(`${vTick}V`, x1 + 6, y + 4);
+      cx.fillStyle = '#f87171';
+      cx.fillText(`| ${aTick}A`, x1 + 36, y + 4);
     }
 
+    // 2. Garis Grid Vertikal + Angka Sumbu Waktu Bawah (Detik)
+    const totalSec = 8.0;
+    const tEnd = hist.length > 0 ? hist[hist.length - 1].t : 0;
+    const tStart = hist.length >= HMAX ? hist[0].t : Math.max(0, tEnd - totalSec);
+    const tSpan = Math.max(1.0, hist.length >= HMAX ? (tEnd - tStart) : totalSec);
+
+    cx.textAlign = 'center';
+    cx.fillStyle = '#64748b';
+    for (let s = 0; s <= 8; s++) {
+      const x = x0 + (pw * s) / 8;
+      cx.strokeStyle = '#162032';
+      cx.beginPath(); cx.moveTo(x, y0); cx.lineTo(x, y1); cx.stroke();
+      const tVal = tStart + (s / 8) * tSpan;
+      cx.fillText(`${fmt(tVal, 1)}s`, x, y1 + 17);
+    }
+
+    // 3. Fungsi Plot Kurva
     const plotSeries = (fnNorm, color, dashed = false, width = 2.4) => {
       if (hist.length < 2) return;
       cx.beginPath();
@@ -647,7 +732,7 @@
       cx.setLineDash(dashed ? [6, 5] : []);
       for (let i = 0; i < hist.length; i++) {
         const x = x0 + (i / (HMAX - 1)) * pw;
-        const norm = Math.max(0, Math.min(1.05, fnNorm(hist[i])));
+        const norm = Math.max(0, Math.min(1.04, fnNorm(hist[i])));
         const y = y1 - norm * ph;
         if (i === 0) cx.moveTo(x, y);
         else cx.lineTo(x, y);
@@ -658,9 +743,77 @@
 
     plotSeries(p => p.wRef / 1600, '#94a3b8', true, 1.8);
     plotSeries(p => p.wActual / 1600, '#22c55e', false, 2.8);
-    plotSeries(p => p.ea / 26, '#f59e0b', false, 2.0);
-    plotSeries(p => p.eb / 26, '#c084fc', false, 1.9);
+    plotSeries(p => p.ea / 24, '#f59e0b', false, 2.0);
+    plotSeries(p => p.eb / 24, '#c084fc', false, 1.9);
     plotSeries(p => p.ia / 8, '#ef4444', false, 2.2);
+
+    // 4. Label Angka Langsung pada Ujung Kurva Terakhir
+    if (hist.length > 2) {
+      const last = hist[hist.length - 1];
+      const lx = x0 + ((hist.length - 1) / (HMAX - 1)) * pw;
+      const yW = y1 - Math.max(0, Math.min(1.04, last.wActual / 1600)) * ph;
+      const yRef = y1 - Math.max(0, Math.min(1.04, last.wRef / 1600)) * ph;
+
+      // Titik ujung kurva kecepatan aktual
+      cx.fillStyle = '#22c55e';
+      cx.beginPath(); cx.arc(lx, yW, 4, 0, Math.PI * 2); cx.fill();
+
+      // Label angka langsung di dekat ujung kurva
+      cx.font = 'bold 11px Consolas, monospace';
+      cx.textAlign = lx > x0 + pw * 0.78 ? 'right' : 'left';
+      const offsetX = lx > x0 + pw * 0.78 ? -8 : 8;
+      cx.fillStyle = '#4ade80';
+      cx.fillText(`ω=${Math.round(last.wActual)} RPM`, lx + offsetX, Math.max(y0 + 12, yW - 6));
+
+      if (Math.abs(yRef - yW) > 14) {
+        cx.fillStyle = '#cbd5e1';
+        cx.fillText(`Target=${Math.round(last.wRef)} RPM`, lx + offsetX, Math.max(y0 + 12, yRef - 5));
+      }
+    }
+
+    // 5. Crosshair & Kotak Angka Detail Saat Kursor Diarahkan ke Grafik
+    if (hoverIdx >= 0 && hoverIdx < hist.length) {
+      const pt = hist[hoverIdx];
+      const hx = x0 + (hoverIdx / (HMAX - 1)) * pw;
+
+      cx.strokeStyle = 'rgba(226,232,240,0.5)';
+      cx.lineWidth = 1;
+      cx.setLineDash([4, 4]);
+      cx.beginPath(); cx.moveTo(hx, y0); cx.lineTo(hx, y1); cx.stroke();
+      cx.setLineDash([]);
+
+      const yH = y1 - Math.max(0, Math.min(1.04, pt.wActual / 1600)) * ph;
+      cx.fillStyle = '#22c55e';
+      cx.beginPath(); cx.arc(hx, yH, 4.5, 0, Math.PI * 2); cx.fill();
+
+      // Kotak Tooltip
+      const boxW = 215, boxH = 112;
+      const bx = hx + 14 + boxW > x1 ? hx - boxW - 14 : hx + 14;
+      const by = y0 + 8;
+
+      cx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      cx.strokeStyle = '#475569';
+      cx.lineWidth = 1;
+      cx.beginPath();
+      cx.roundRect(bx, by, boxW, boxH, 6);
+      cx.fill();
+      cx.stroke();
+
+      cx.textAlign = 'left';
+      cx.font = '11px Consolas, monospace';
+      cx.fillStyle = '#94a3b8';
+      cx.fillText(`Waktu t     : ${fmt(pt.t, 2)} dtk`, bx + 10, by + 18);
+      cx.fillStyle = '#e2e8f0';
+      cx.fillText(`Target ωref : ${Math.round(pt.wRef)} RPM`, bx + 10, by + 34);
+      cx.fillStyle = '#4ade80';
+      cx.fillText(`Aktual ω    : ${Math.round(pt.wActual)} RPM (Err: ${Math.round(pt.wRef - pt.wActual)})`, bx + 10, by + 50);
+      cx.fillStyle = '#fbbf24';
+      cx.fillText(`PWM ea      : ${fmt(pt.ea, 1)} V`, bx + 10, by + 66);
+      cx.fillStyle = '#c084fc';
+      cx.fillText(`Back-EMF eb : ${fmt(pt.eb, 1)} V`, bx + 10, by + 82);
+      cx.fillStyle = '#f87171';
+      cx.fillText(`Arus ia     : ${fmt(pt.ia, 2)} A`, bx + 10, by + 98);
+    }
   }
 
   // ---------- Loop Animasi Utama ----------
@@ -677,10 +830,10 @@
       stepSub(dtReal / subSteps);
     }
 
-    hist.push({ wRef, wActual, ea, eb, ia });
+    hist.push({ t: simTime, wRef, wActual, ea, eb, ia });
     if (hist.length > HMAX) hist.shift();
 
-    // Putar poros 3D
+    // Putar poros 3D (Label 3D TIDAK diikutkan ke rotorGroup sehingga tetap diam & mudah dibaca)
     rotorGroup.rotation.x = shaftAngle;
 
     // Exploded view 3D sepanjang sumbu X & Y
@@ -700,20 +853,28 @@
     // Animasi titik arus jangkar ia & pulsa kabel
     const iaNorm = Math.min(1, ia / 4.5);
     currentDots.forEach(d => {
-      d.t = (d.t + dtReal * (0.3 + iaNorm * 2.2)) % 1;
+      if (ia > 0.01) {
+        d.t = (d.t + dtReal * (0.25 + iaNorm * 2.2)) % 1;
+      }
       d.m.position.copy(d.path.getPointAt(d.t));
     });
     fbPulses.forEach(p => {
-      p.t = (p.t + dtReal * (0.2 + (wActual / 1400) * 1.8)) % 1;
+      if (wActual > 0.5) {
+        p.t = (p.t + dtReal * (0.2 + (wActual / 1400) * 1.8)) % 1;
+      }
       p.m.position.copy(fbCurve.getPointAt(p.t));
     });
     pwmPulses.forEach(p => {
-      p.t = (p.t + dtReal * (0.2 + (ea / 24) * 2.0)) % 1;
+      if (ea > 0.05) {
+        p.t = (p.t + dtReal * (0.2 + (ea / 24) * 2.0)) % 1;
+      }
       p.m.position.copy(pwmCurve.getPointAt(p.t));
     });
 
-    // Update Angka Kartu
+    // Update Angka Kartu & Bar Metrik Grafik
     const errNow = Math.round(wRef - wActual);
+    const overshootPct = wRef > 0 && peakW > wRef ? ((peakW - wRef) / wRef) * 100 : 0;
+
     $('mW').textContent = `${Math.round(wActual)} RPM`;
     $('mErr').textContent = `Target: ${wRef} RPM · Error: ${errNow} RPM`;
     $('mEa').textContent = `${fmt(ea, 1)} V`;
@@ -723,9 +884,16 @@
     $('mT').textContent = `${fmt(torque, 2)} Nm`;
     $('mTS').textContent = `Beban rem: ${fmt(loadTorque, 2)} Nm + gesekan poros`;
 
+    $('cmRef').textContent = `${wRef} RPM`;
+    $('cmAct').textContent = `${Math.round(wActual)} RPM`;
+    $('cmErr').textContent = `${errNow} RPM`;
+    $('cmPeak').textContent = `${Math.round(peakW)} RPM (Overshoot ${fmt(overshootPct, 1)}%)`;
+
     // Update Kotak Status Dinamis
     const Ki = parseFloat(kiSlider.value);
-    if (Ki === 0 && Math.abs(errNow) > 25) {
+    if (wRef === 0) {
+      $('statusBox').innerHTML = `<b>Target ωref = 0 RPM (Motor Berhenti):</b> Tegangan PWM diputus (<i>ea = 0,0 V</i>) dan arus jangkar menjadi <i>0,00 A</i> sehingga poros melambat akibat gesekan hingga berhenti tepat di <b>0 RPM</b>.`;
+    } else if (Ki === 0 && Math.abs(errNow) > 25) {
       $('statusBox').innerHTML = `<b>Kontroler P Murni (Tanpa Integral):</b> Kecepatan tertahan di <b>${Math.round(wActual)} RPM</b> (kurang ${errNow} RPM dari target ${wRef} RPM). Pada titik ini tegangan <i>ea = ${fmt(ea, 1)} V</i> dikurangi <i>Back-EMF eb = ${fmt(eb, 1)} V</i> hanya menyisakan arus <i>ia = ${fmt(ia, 2)} A</i> yang habis untuk melawan gesekan dan beban. Aktifkan <b>Kontroler PI / PID</b> untuk menghapus sisa error ini!`;
     } else if (loadTorque > 0) {
       $('statusBox').innerHTML = `<b>Beban Rem Poros Aktif (${fmt(loadTorque, 2)} Nm):</b> Sepatu rem menahan roda beban sehingga mikrokontroler PID menaikkan tegangan PWM menjadi <b>${fmt(ea, 1)} V</b>. Selisih <i>(ea − eb)</i> membesar dan mendorong arus jangkar naik ke <b>${fmt(ia, 2)} A</b> untuk menghasilkan torsi <b>${fmt(torque, 2)} Nm</b> agar kecepatan bertahan di <b>${Math.round(wActual)} RPM</b>.`;
