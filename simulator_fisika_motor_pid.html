@@ -3,46 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulator 3D: Fisika Motor DC & Kendali Kecepatan PID</title>
+  <title>Simulator 3D: Fisika Motor DC dan Kendali PID</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #1e293b;
-      --card: #090d16;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --volt: #f59e0b;
-      --amp: #ef4444;
-      --rpm: #22c55e;
-      --bemf: #c084fc;
+      --bg: #0f172a; --panel: #1e293b; --card: #090d16;
+      --text: #f8fafc; --muted: #94a3b8; --accent: #38bdf8;
+      --volt: #f59e0b; --amp: #ef4444; --rpm: #22c55e; --emf: #c084fc;
     }
     * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body {
-      margin: 0; padding: 16px;
-      background: var(--bg); color: var(--text);
-      display: flex; justify-content: center;
-    }
-    .container {
-      max-width: 1180px; width: 100%;
-      background: var(--panel); border-radius: 12px;
-      padding: 18px; border: 1px solid #334155;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.45);
-    }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+    .container { max-width: 1180px; width: 100%; background: var(--panel); border-radius: 12px; padding: 18px; border: 1px solid #334155; }
     h2 { margin: 0 0 4px; font-size: 1.3rem; color: var(--accent); }
-    .sub { margin: 0 0 12px; font-size: 0.88rem; color: var(--muted); }
-    .preset-bar {
+    .sub { color: var(--muted); font-size: 0.88rem; margin: 0 0 12px; }
+
+    .presets {
       display: flex; flex-wrap: wrap; gap: 8px;
-      background: #0f172a; padding: 11px 12px; border-radius: 8px;
+      background: #0f172a; padding: 10px 12px; border-radius: 8px;
       margin-bottom: 12px; border: 1px solid #334155; align-items: center;
     }
-    button {
+    .btn {
       padding: 7px 11px; border-radius: 6px; border: 1px solid #475569;
-      background: #1e293b; color: #f8fafc; font-size: 0.8rem; font-weight: 600;
+      background: #1e293b; color: #e2e8f0; font-size: 0.8rem; font-weight: 600;
       cursor: pointer; transition: 0.15s;
     }
-    button:hover { background: #334155; }
-    button.on { border-color: var(--accent); background: rgba(56,189,248,0.16); color: #7dd3fc; }
+    .btn:hover { background: #334155; }
+    .btn.on { border-color: var(--accent); background: rgba(56,189,248,0.16); color: #7dd3fc; }
     .btn-p { border-color: #f59e0b; color: #fbbf24; }
     .btn-pi { border-color: #38bdf8; color: #7dd3fc; }
     .btn-pid { border-color: #22c55e; color: #4ade80; }
@@ -50,151 +35,186 @@
     .btn-load.active { background: rgba(239,68,68,0.22); color: #fca5a5; }
 
     .controls {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-      gap: 12px; background: #0f172a; padding: 12px 14px; border-radius: 8px;
-      margin-bottom: 14px; border: 1px solid #334155;
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+      background: #0f172a; padding: 12px; border-radius: 8px; margin-bottom: 12px;
+      border: 1px solid #334155;
     }
-    .control-group { display: flex; flex-direction: column; gap: 4px; }
+    @media (max-width: 960px) { .controls { grid-template-columns: repeat(2, 1fr); } }
+    .cg { display: flex; flex-direction: column; gap: 5px; }
     label { font-size: 0.78rem; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
-    label strong { color: var(--accent); font-family: monospace; }
+    label b { color: var(--accent); font-family: Consolas, monospace; }
     input[type="range"] { width: 100%; }
 
-    .dashboard {
-      display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
-      margin-bottom: 14px;
-    }
-    @media (max-width: 900px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
-    .card {
-      background: var(--card); border: 1px solid #334155;
-      border-radius: 8px; padding: 9px 10px; text-align: center;
-    }
-    .c-title { font-size: 0.71rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
-    .c-val { font-size: 1.28rem; font-weight: bold; margin-top: 3px; font-family: monospace; }
-    .c-sub { font-size: 0.71rem; color: #64748b; margin-top: 2px; }
+    .main { display: grid; grid-template-columns: 1fr 295px; gap: 12px; }
+    @media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
 
-    .main-grid {
-      display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px;
-    }
-    @media (max-width: 960px) { .main-grid { grid-template-columns: 1fr; } }
     .view3d {
       position: relative; background: #0b1220; border: 1px solid #334155;
-      border-radius: 8px; height: 390px; overflow: hidden;
+      border-radius: 8px; height: 450px; overflow: hidden;
     }
     .view3d canvas { display: block; width: 100%; height: 100%; }
-    .hint {
-      position: absolute; left: 10px; bottom: 8px;
-      font-size: 0.74rem; color: #64748b; pointer-events: none;
+    .top-bar {
+      position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; z-index: 2;
     }
-    .toolbar3d {
-      position: absolute; right: 10px; top: 8px;
-      display: flex; gap: 6px; z-index: 2;
-    }
+    .hint { position: absolute; left: 10px; bottom: 8px; font-size: 0.75rem; color: #64748b; pointer-events: none; }
+    .slow { position: absolute; right: 10px; bottom: 8px; font-size: 0.75rem; color: #64748b; pointer-events: none; }
+
     .lbl {
       position: absolute; transform: translate(-50%, -100%);
-      pointer-events: none; font-size: 0.71rem; font-weight: 700;
-      color: #e2e8f0; background: rgba(15,23,42,0.85);
+      pointer-events: none; font-size: 0.73rem; font-weight: 700;
+      color: #e2e8f0; background: rgba(15,23,42,0.88);
       border: 1px solid #475569; border-radius: 5px;
-      padding: 2px 6px; white-space: nowrap;
+      padding: 3px 8px; white-space: nowrap;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+    .lbl::after {
+      content: ''; position: absolute; left: 50%; top: 100%;
+      width: 1px; height: 9px; background: #94a3b8;
     }
     .lbl.key { border-color: var(--accent); color: #7dd3fc; }
     .lbl.warn { border-color: var(--amp); color: #fca5a5; }
 
-    .box-chart {
+    .side { display: flex; flex-direction: column; gap: 8px; }
+    .m { background: var(--card); border: 1px solid #334155; border-radius: 8px; padding: 9px 11px; }
+    .m .t { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+    .m .val { font-size: 1.22rem; font-weight: 700; margin-top: 2px; font-family: Consolas, monospace; }
+    .m .s { font-size: 0.72rem; color: #64748b; margin-top: 1px; }
+
+    .status {
+      background: #0f172a; border-left: 4px solid var(--accent);
+      border-radius: 6px; padding: 10px 12px; font-size: 0.85rem;
+      line-height: 1.5; margin-top: 12px;
+    }
+
+    .chart {
       background: var(--card); border: 1px solid #334155;
-      border-radius: 8px; padding: 12px; display: flex;
-      flex-direction: column; justify-content: space-between;
+      border-radius: 8px; padding: 10px 12px; margin-top: 12px;
     }
-    .box-chart canvas { width: 100%; height: auto; border-radius: 6px; display: block; }
-    .explain {
-      margin-top: 10px; padding: 11px 14px; background: #0f172a;
-      border-left: 4px solid var(--rpm); border-radius: 6px;
-      font-size: 0.84rem; line-height: 1.5; color: #e2e8f0;
+    .chart canvas { width: 100%; height: auto; display: block; }
+    .legend { font-size: 0.78rem; color: var(--muted); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 16px; }
+
+    .info { display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px; margin-top: 12px; }
+    @media (max-width: 760px) { .info { grid-template-columns: 1fr; } }
+    .box {
+      padding: 11px 13px; background: #0f172a; border-left: 4px solid var(--accent);
+      border-radius: 6px; font-size: 0.86rem; line-height: 1.55; color: #e2e8f0;
     }
+    .box h3 { margin: 0 0 6px; font-size: 0.95rem; color: var(--accent); }
+    .box.alt { border-left-color: var(--volt); }
+    .box.alt h3 { color: #fbbf24; }
+    .box ul, .box ol { margin: 4px 0 0 18px; padding: 0; }
     .err { color: #f87171; padding: 30px; text-align: center; }
   </style>
 </head>
 <body>
-
 <div class="container">
-  <h2>Simulator 3D: Fisika Motor DC & Kendali Kecepatan PID (Volt, Ampere, Back-EMF, Torsi)</h2>
-  <p class="sub">Rumus Kunci: <strong>ia = (ea − Kb·ω) ÷ Ra</strong> dan <strong>Torsi T = Kt · ia</strong>. Amati dalam 3D bagaimana mikrokontroler membaca piringan encoder, mengatur PWM ke driver, serta menaikkan arus dan torsi saat sepatu rem menekan roda beban.</p>
+  <h2>Simulator 3D: Fisika Motor DC & Kendali Kecepatan PID</h2>
+  <p class="sub">Poros motor memanjang dari kiri ke kanan: <b>Encoder (kiri)</b> membaca kecepatan aktual ω dan mengirimkannya ke <b>Mikrokontroler & Driver PWM (depan)</b> untuk mengatur tegangan <b>ea</b> pada <b>Motor DC (tengah)</b> guna melawan <b>Rem Beban Mekanis (kanan)</b>.</p>
 
-  <div class="preset-bar">
-    <button class="btn-p" id="btnPOnly">1. Kontroler P Murni (Tertahan ~940 RPM karena Gesekan b)</button>
-    <button class="btn-pi" id="btnPI">2. Kontroler P + I (Tembus Tepat 1000 RPM, ess = 0)</button>
-    <button class="btn-pid" id="btnPID">3. Kontroler P + I + D Lengkap (Mendarat Mulus 1000 RPM)</button>
-    <button class="btn-load" id="btnToggleLoad">🏋️ Beri Beban Rem Poros (T_load = 0,00 Nm)</button>
+  <div class="presets">
+    <button class="btn btn-p" id="btnPOnly">1. Kontroler P Murni (Tertahan ~935 RPM karena Gesekan)</button>
+    <button class="btn btn-pi" id="btnPI">2. Kontroler PI (Tembus Tepat 1000 RPM, ess = 0)</button>
+    <button class="btn btn-pid on" id="btnPID">3. Kontroler PID Lengkap (Cepat & Halus di 1000 RPM)</button>
+    <button class="btn btn-load" id="btnToggleLoad">🏋️ Beri Beban Rem Poros (Tload = 0,00 Nm)</button>
+    <button class="btn" id="btnReset">↺ Reset dari 0 RPM</button>
   </div>
 
   <div class="controls">
-    <div class="control-group">
-      <label>Target Kecepatan (ωref): <strong id="refVal">1000 RPM</strong></label>
-      <input type="range" id="refSlider" min="400" max="1500" step="50" value="1000">
+    <div class="cg">
+      <label>Target ωref: <b id="refVal">1000 RPM</b></label>
+      <input type="range" id="refSlider" min="400" max="1400" step="50" value="1000">
     </div>
-    <div class="control-group">
-      <label>Gain Proporsional (Kp): <strong id="kpVal">0,18</strong></label>
-      <input type="range" id="kpSlider" min="0.02" max="0.50" step="0.01" value="0.18">
+    <div class="cg">
+      <label>Gain P (Kp): <b id="kpVal">0,22</b></label>
+      <input type="range" id="kpSlider" min="0.04" max="0.50" step="0.02" value="0.22">
     </div>
-    <div class="control-group">
-      <label>Gain Integral (Ki): <strong id="kiVal">0,45</strong></label>
+    <div class="cg">
+      <label>Gain I (Ki): <b id="kiVal">0,45</b></label>
       <input type="range" id="kiSlider" min="0.00" max="1.20" step="0.05" value="0.45">
     </div>
-    <div class="control-group">
-      <label>Gain Derivatif (Kd): <strong id="kdVal">0,015</strong></label>
-      <input type="range" id="kdSlider" min="0.000" max="0.060" step="0.005" value="0.015">
+    <div class="cg">
+      <label>Gain D (Kd): <b id="kdVal">0,008</b></label>
+      <input type="range" id="kdSlider" min="0.000" max="0.030" step="0.002" value="0.008">
     </div>
-    <div class="control-group">
-      <label>Beban Rem Mekanis: <strong id="loadVal">0,00 Nm</strong></label>
-      <input type="range" id="loadSlider" min="0.00" max="0.50" step="0.05" value="0.00">
+    <div class="cg">
+      <label>Beban Rem: <b id="loadVal">0,00 Nm</b></label>
+      <input type="range" id="loadSlider" min="0.00" max="0.40" step="0.05" value="0.00">
     </div>
-    <div class="control-group">
-      <label>Exploded View 3D: <strong id="expVal">0%</strong></label>
+    <div class="cg">
+      <label>Exploded 3D: <b id="expVal">0%</b></label>
       <input type="range" id="expSlider" min="0" max="100" step="5" value="0">
     </div>
   </div>
 
-  <div class="dashboard">
-    <div class="card">
-      <div class="c-title">Kecepatan Aktual (ω)</div>
-      <div class="c-val" id="rpmMetric" style="color:#22c55e">0 RPM</div>
-      <div class="c-sub" id="errMetric">Error: 1000 RPM</div>
+  <div class="main">
+    <div class="view3d" id="view">
+      <div class="top-bar">
+        <button class="btn on" id="btnLbl">Label 3D</button>
+        <button class="btn on" id="btnHousing">Buka Rumah Motor</button>
+        <button class="btn" id="btnCam">Reset Kamera</button>
+      </div>
+      <div class="hint">Seret: putar sudut pandang · Scroll: zoom · Klik kanan + seret: geser</div>
+      <div class="slow">Putaran visual diperlambat agar kumparan & celah encoder terlihat jelas</div>
     </div>
-    <div class="card">
-      <div class="c-title">Tegangan Suplai PWM (ea)</div>
-      <div class="c-val" id="eaMetric" style="color:#f59e0b">0,0 V</div>
-      <div class="c-sub" id="pwmSub">Duty Cycle: 0% (Maks 24 V)</div>
-    </div>
-    <div class="card">
-      <div class="c-title">Back-EMF (eb = Kb·ω)</div>
-      <div class="c-val" id="ebMetric" style="color:#c084fc">0,0 V</div>
-      <div class="c-sub">Tegangan Lawan Kumparan</div>
-    </div>
-    <div class="card">
-      <div class="c-title">Arus Jangkar (ia)</div>
-      <div class="c-val" id="iaMetric" style="color:#ef4444">0,00 A</div>
-      <div class="c-sub">ia = (ea − eb) ÷ Ra</div>
-    </div>
-    <div class="card">
-      <div class="c-title">Torsi Putar (T = Kt·ia)</div>
-      <div class="c-val" id="torqueMetric" style="color:#38bdf8">0,00 Nm</div>
-      <div class="c-sub" id="loadSub">Beban Luar: 0,00 Nm</div>
+
+    <div class="side">
+      <div class="m">
+        <div class="t">Kecepatan Poros Aktual (ω)</div>
+        <div class="val" id="mW" style="color:var(--rpm)">0 RPM</div>
+        <div class="s" id="mErr">Target: 1000 RPM · Error: 1000 RPM</div>
+      </div>
+      <div class="m">
+        <div class="t">Tegangan Jangkar PWM (ea)</div>
+        <div class="val" id="mEa" style="color:var(--volt)">0,0 V</div>
+        <div class="s" id="mPwm">Duty Cycle PWM: 0% (Suplai Maks 24 V)</div>
+      </div>
+      <div class="m">
+        <div class="t">Back-EMF (eb = Kb · ω)</div>
+        <div class="val" id="mEb" style="color:var(--emf)">0,0 V</div>
+        <div class="s">Tegangan lawan akibat putaran kumparan</div>
+      </div>
+      <div class="m">
+        <div class="t">Arus Jangkar ia = (ea − eb) ÷ Ra</div>
+        <div class="val" id="mIa" style="color:var(--amp)">0,00 A</div>
+        <div class="s" id="mIaS">Ra = 2,0 Ω</div>
+      </div>
+      <div class="m">
+        <div class="t">Torsi Motor T = Kt · ia</div>
+        <div class="val" id="mT" style="color:var(--accent)">0,00 Nm</div>
+        <div class="s" id="mTS">Beban rem: 0,00 Nm + gesekan poros</div>
+      </div>
     </div>
   </div>
 
-  <div class="main-grid">
-    <div class="view3d" id="view3d">
-      <div class="toolbar3d">
-        <button class="on" id="btnLbl">Label 3D</button>
-        <button class="on" id="btnCut">Buka Rumah Motor</button>
-      </div>
-      <div class="hint">Seret: putar 3D · Scroll: zoom · Klik kanan: geser</div>
-    </div>
+  <div class="status" id="statusBox"></div>
 
-    <div class="box-chart">
-      <canvas id="teleCanvas" width="540" height="255"></canvas>
-      <div class="explain" id="explainText">
-        <strong>💡 Pengamatan 3D & Grafik:</strong> Tekan <strong>"🏋️ Beri Beban Rem Poros"</strong>! Sepatu rem merah di ujung depan poros akan menjepit roda beban sehingga <em>ω</em> turun sesaat. Turunnya <em>ω</em> menurunkan <strong>Back-EMF (eb)</strong>, sedangkan mikrokontroler PID menaikkan <strong>PWM (ea)</strong>. Selisih <em>(ea − eb)</em> membesar sehingga <strong>Arus Jangkar (ia)</strong> melonjak naik menghasilkan <strong>Torsi ekstra (T = Kt·ia)</strong> untuk mengembalikan putaran ke 1000 RPM!
-      </div>
+  <div class="chart">
+    <canvas id="chartCanvas" width="1120" height="220"></canvas>
+    <div class="legend">
+      <span><b style="color:#94a3b8">- - - Target ωref (RPM)</b></span>
+      <span><b style="color:#22c55e">━━━ Kecepatan Aktual ω (RPM)</b></span>
+      <span><b style="color:#f59e0b">━━━ Tegangan PWM ea (Volt)</b></span>
+      <span><b style="color:#c084fc">━━━ Back-EMF eb (Volt)</b></span>
+      <span><b style="color:#ef4444">━━━ Arus Jangkar ia (Ampere)</b></span>
+    </div>
+  </div>
+
+  <div class="info">
+    <div class="box">
+      <h3>Bagaimana P, I, dan D Mengendalikan Fisika Motor DC?</h3>
+      <ol>
+        <li><b>Kontroler P Murni (Tombol 1):</b> Mengatur tegangan PWM <i>ea</i> sebanding dengan error kecepatan. Saat mendekati 1000 RPM, error mengecil sehingga dorongan <i>ea</i> melemah dan habis terpakai untuk melawan <i>back-EMF (eb)</i> serta gesekan poros <i>b</i>. Akibatnya motor tertahan di sekitar <b>935 RPM</b> (muncul <i>steady-state error</i>).</li>
+        <li><b>Peran Integral Ki (Tombol 2):</b> Menjumlahkan sisa kekurangan RPM dari waktu ke waktu untuk menaikkan tegangan <i>ea</i> secara bertahap. Naiknya <i>ea</i> memperbesar selisih <i>(ea − eb)</i> sehingga arus <i>ia</i> dan torsi naik sampai kecepatan menyentuh tepat <b>1000 RPM (ess = 0)</b>.</li>
+        <li><b>Peran Derivatif Kd (Tombol 3):</b> Mendeteksi laju kenaikan kecepatan yang terlalu cepat akibat inersia rotor, lalu mengurangi tegangan <i>ea</i> lebih awal sebagai pengereman dinamis sehingga kecepatan mendarat mulus tanpa lonjakan (<i>overshoot</i>).</li>
+      </ol>
+    </div>
+    <div class="box alt">
+      <h3>Coba Eksperimen Ini</h3>
+      <ul>
+        <li>Klik <b>1. Kontroler P Murni</b>: perhatikan kurva hijau berhenti di bawah garis putus-putus 1000 RPM.</li>
+        <li>Klik <b>3. Kontroler PID Lengkap</b>, tunggu stabil di 1000 RPM, lalu tekan <b>🏋️ Beri Beban Rem Poros</b>: lihat di 3D bagaimana kaliper rem merah menjepit roda beban di kanan!</li>
+        <li>Saat direm, kecepatan ω turun sesaat → <b>Back-EMF (eb)</b> turun → PID menaikkan <b>PWM (ea)</b> → <b>Arus (ia)</b> melonjak naik menghasilkan torsi ekstra untuk mengembalikan putaran ke 1000 RPM!</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -205,239 +225,294 @@
 (function () {
   const $ = id => document.getElementById(id);
   const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+  const view = $('view');
 
-  // Parameter Fisik Motor DC 24V
-  const Ra = 2.0;       // Ohm
-  const Kb = 0.012;     // V per RPM
-  const Kt = 0.15;      // Nm per Ampere
-  const J0 = 0.0025;    // Inersia
-  const b0 = 0.00016;   // Gesekan viskos alami
+  if (typeof THREE === 'undefined' || !THREE.OrbitControls) {
+    view.innerHTML = '<div class="err">Library 3D gagal dimuat. Pastikan perangkat terhubung ke internet.</div>';
+    return;
+  }
+
+  // ---------- Parameter Fisika Motor DC (Stabil & Halus dengan Sub-Stepping) ----------
+  const Ra = 2.0;        // Resistansi jangkar (Ohm)
+  const Kb = 0.012;      // Konstanta Back-EMF (V / RPM) -> pada 1000 RPM, eb = 12,0 V
+  const Kt = 0.16;       // Konstanta Torsi (Nm / A)
+  const J0 = 0.085;      // Momen inersia efektif (agar akselerasi terlihat jelas & mulus)
+  const b0 = 0.00018;    // Gesekan viskos alami
 
   let wRef = 1000;
   let wActual = 0;
-  let rotorAngle = 0;
   let integErr = 0;
-  let prevW = 0;
+  let dWFiltered = 0;
   let loadTorque = 0.0;
   let ea = 0, eb = 0, ia = 0, torque = 0;
+  let shaftAngle = 0;
   let expl = 0;
   let showLabels = true;
   let cutaway = true;
 
-  const history = [];
-  const maxHist = 300;
+  // ---------- Three.js Scene (Poros Motor Memanjang Horizontal Sepanjang Sumbu X) ----------
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  view.prepend(renderer.domElement);
 
-  // Setup Three.js 3D Scene
-  const view = $('view3d');
-  let renderer, scene, camera, controls;
-  const labels = [];
-  let rotorGroup, statorGroup, housingMesh, encDiscGroup, flywheelMesh, brakePadTop, brakePadBot, brakeGlow;
-  const pwmDots = [], fbDots = [], coilMeshes = [];
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b1220);
 
-  function init3D() {
-    if (typeof THREE === 'undefined' || !THREE.OrbitControls) {
-      view.innerHTML = '<div class="err">Library 3D gagal dimuat. Periksa koneksi internet Anda.</div>';
-      return false;
-    }
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    view.prepend(renderer.domElement);
+  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  function resetCameraPos() {
+    camera.position.set(0.2, 2.55, 6.2);
+  }
+  resetCameraPos();
 
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b1220);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.set(0, -0.15, 0.15);
 
-    camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    camera.position.set(3.4, 2.5, 4.3);
+  scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.85));
+  const dl1 = new THREE.DirectionalLight(0xffffff, 0.95);
+  dl1.position.set(5, 8, 6);
+  scene.add(dl1);
+  const dl2 = new THREE.DirectionalLight(0x60a5fa, 0.35);
+  dl2.position.set(-5, 3, -4);
+  scene.add(dl2);
 
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.target.set(0, -0.15, 0);
+  const grid = new THREE.GridHelper(12, 24, 0x1e293b, 0x151e2e);
+  grid.position.y = -1.65;
+  scene.add(grid);
 
-    scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.85));
-    const dl = new THREE.DirectionalLight(0xffffff, 0.95);
-    dl.position.set(5, 8, 6);
-    scene.add(dl);
-    const dl2 = new THREE.DirectionalLight(0x60a5fa, 0.35);
-    dl2.position.set(-5, 3, -4);
-    scene.add(dl2);
+  const mat = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.45, metalness: 0.3 }, o));
+  const M = {
+    north: mat(0xdc2626),
+    south: mat(0x2563eb),
+    copper: mat(0xd97706, { metalness: 0.7, roughness: 0.3 }),
+    comm: mat(0xf59e0b, { metalness: 0.75, roughness: 0.25 }),
+    carbon: mat(0x27272a, { roughness: 0.9 }),
+    shaft: mat(0xe2e8f0, { metalness: 0.85, roughness: 0.2 }),
+    core: new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5, roughness: 0.4, transparent: true, opacity: 0.35, depthWrite: false }),
+    housing: new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, transparent: true, opacity: 0.2, depthWrite: false }),
+    disc: mat(0x334155, { metalness: 0.6 }),
+    slot: mat(0x38bdf8, { emissive: 0x0284c7, emissiveIntensity: 0.35 }),
+    wheel: mat(0x475569, { metalness: 0.75, roughness: 0.3 }),
+    brake: mat(0xef4444, { roughness: 0.45 }),
+    pcb: mat(0x065f46, { roughness: 0.6 }),
+    chip: mat(0x1e293b, { roughness: 0.35 })
+  };
 
-    const grid = new THREE.GridHelper(10, 20, 0x1e293b, 0x151e2e);
-    grid.position.y = -1.65;
-    scene.add(grid);
-
-    const mat = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.45, metalness: 0.25 }, o));
-    const M = {
-      north: mat(0xdc2626),
-      south: mat(0x2563eb),
-      copper: mat(0xf59e0b, { metalness: 0.7, roughness: 0.3 }),
-      shaft: mat(0xe2e8f0, { metalness: 0.85, roughness: 0.2 }),
-      core: mat(0x475569, { metalness: 0.6, roughness: 0.4 }),
-      pcb: mat(0x065f46, { roughness: 0.6 }),
-      chip: mat(0x1e293b, { roughness: 0.4 }),
-      disc: mat(0x38bdf8, { metalness: 0.5, roughness: 0.3 }),
-      wheel: mat(0x64748b, { metalness: 0.75, roughness: 0.3 }),
-      brake: mat(0xef4444, { roughness: 0.5 }),
-      housing: new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, transparent: true, opacity: 0.22, depthWrite: false })
-    };
-
-    function sectorZ(rIn, rOut, a0, a1, len, m) {
-      const s = new THREE.Shape();
-      s.absarc(0, 0, rOut, a0, a1, false);
-      s.absarc(0, 0, rIn, a1, a0, true);
-      const g = new THREE.ExtrudeGeometry(s, { depth: len, bevelEnabled: false, curveSegments: 28 });
-      g.translate(0, 0, -len / 2);
-      return new THREE.Mesh(g, m);
-    }
-
-    function addLabel(text, parent, x, y, z, cls = '') {
-      const o = new THREE.Object3D();
-      o.position.set(x, y, z);
-      parent.add(o);
-      const el = document.createElement('div');
-      el.className = 'lbl' + (cls ? ' ' + cls : '');
-      el.textContent = text;
-      view.appendChild(el);
-      labels.push({ el, obj: o });
-      return el;
-    }
-
-    // 1. Stator & Housing Motor DC (tengah Z = 0)
-    statorGroup = new THREE.Group();
-    scene.add(statorGroup);
-    const magN = sectorZ(0.78, 1.02, Math.PI - 0.65, Math.PI + 0.65, 1.4, M.north);
-    const magS = sectorZ(0.78, 1.02, -0.65, 0.65, 1.4, M.south);
-    statorGroup.add(magN, magS);
-    addLabel('Stator Magnet N–S', statorGroup, -0.95, 0.75, 0, 'key');
-
-    housingMesh = sectorZ(1.03, 1.15, 0, Math.PI * 2, 1.55, M.housing);
-    scene.add(housingMesh);
-
-    // 2. Rotor, Poros, Kumparan Jangkar, Piringan Encoder (belakang), & Roda Beban (depan)
-    rotorGroup = new THREE.Group();
-    scene.add(rotorGroup);
-
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 4.2, 20), M.shaft);
-    shaft.rotation.x = Math.PI / 2;
-    rotorGroup.add(shaft);
-
-    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 1.25, 24), M.core);
-    core.rotation.x = Math.PI / 2;
-    rotorGroup.add(core);
-
-    // 3 Kumparan Jangkar
-    for (let k = 0; k < 3; k++) {
-      const ang = (k * Math.PI) / 3;
-      const coil = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.16, 1.18), M.copper.clone());
-      coil.rotation.z = ang;
-      rotorGroup.add(coil);
-      coilMeshes.push(coil);
-    }
-    addLabel('Kumparan Jangkar (ia → T = Kt·ia)', rotorGroup, 0, 0.68, 0.2, 'key');
-
-    // Piringan Encoder di ujung belakang poros (Z = -1.55)
-    encDiscGroup = new THREE.Group();
-    encDiscGroup.position.z = -1.55;
-    rotorGroup.add(encDiscGroup);
-    const discBase = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.05, 32), mat(0x1e293b));
-    discBase.rotation.x = Math.PI / 2;
-    encDiscGroup.add(discBase);
-    for (let i = 0; i < 12; i++) {
-      const a0 = (i * 2 * Math.PI) / 12;
-      const slot = sectorZ(0.38, 0.56, a0, a0 + Math.PI / 18, 0.06, M.disc);
-      encDiscGroup.add(slot);
-    }
-
-    // Sensor Optocoupler Encoder Statis di atas Piringan
-    const encSensor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 0.22), mat(0x22c55e));
-    encSensor.position.set(0, 0.64, -1.55);
-    scene.add(encSensor);
-    addLabel('Sensor Encoder (Umpan Balik ω)', encSensor, 0, 0.26, 0, 'key');
-
-    // Roda Gila Beban (Flywheel) di ujung depan poros (Z = +1.55)
-    flywheelMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.26, 32), M.wheel);
-    flywheelMesh.rotation.x = Math.PI / 2;
-    flywheelMesh.position.z = 1.55;
-    // Palang penanda putaran pada roda beban
-    for (let i = 0; i < 4; i++) {
-      const spoke = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.08, 0.28), mat(0x38bdf8));
-      spoke.rotation.z = (i * Math.PI) / 2;
-      flywheelMesh.add(spoke);
-    }
-    rotorGroup.add(flywheelMesh);
-
-    // Sepatu Rem Mekanis (Brake Caliper) di atas & bawah Roda Beban
-    brakePadTop = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.18, 0.34), M.brake);
-    brakePadTop.position.set(0, 0.92, 1.55);
-    scene.add(brakePadTop);
-
-    brakePadBot = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.18, 0.34), M.brake);
-    brakePadBot.position.set(0, -0.92, 1.55);
-    scene.add(brakePadBot);
-
-    brakeGlow = sectorZ(0.66, 0.73, 0, Math.PI * 2, 0.28, new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0 }));
-    brakeGlow.position.z = 1.55;
-    scene.add(brakeGlow);
-    addLabel('Rem Beban Poros (Disturbance)', brakePadTop, 0, 0.24, 0, 'warn');
-
-    // 3. Papan Mikrokontroler (PID) & Driver PWM di sisi bawah-kiri
-    const pcbGroup = new THREE.Group();
-    pcbGroup.position.set(-1.65, -1.15, 0);
-    scene.add(pcbGroup);
-    const pcb = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.1, 2.2), M.pcb);
-    pcbGroup.add(pcb);
-    const mcuChip = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.12, 0.45), M.chip);
-    mcuChip.position.set(0, 0.1, -0.55);
-    pcbGroup.add(mcuChip);
-    const drvChip = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.55), mat(0xb45309));
-    drvChip.position.set(0, 0.14, 0.55);
-    pcbGroup.add(drvChip);
-    addLabel('Mikrokontroler (PID) & Driver PWM (ea)', pcbGroup, 0, 0.45, 0, 'key');
-
-    // Jalur Kabel Umpan Balik (Encoder -> MCU) & Jalur Daya PWM (Driver -> Motor)
-    const fbPath = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0.64, -1.55),
-      new THREE.Vector3(-1.3, 0.5, -1.55),
-      new THREE.Vector3(-1.65, -1.05, -0.55)
-    ]);
-    const pwmPath = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-1.65, -1.05, 0.55),
-      new THREE.Vector3(-0.85, -0.75, 0.35),
-      new THREE.Vector3(0, -0.65, 0)
-    ]);
-    scene.add(new THREE.Mesh(new THREE.TubeGeometry(fbPath, 24, 0.025, 8, false), new THREE.MeshBasicMaterial({ color: 0x22c55e })));
-    scene.add(new THREE.Mesh(new THREE.TubeGeometry(pwmPath, 24, 0.03, 8, false), new THREE.MeshBasicMaterial({ color: 0xf59e0b })));
-
-    for (let i = 0; i < 8; i++) {
-      const d1 = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), new THREE.MeshBasicMaterial({ color: 0x4ade80 }));
-      scene.add(d1);
-      fbDots.push({ m: d1, path: fbPath, t: i / 8 });
-
-      const d2 = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
-      scene.add(d2);
-      pwmDots.push({ m: d2, path: pwmPath, t: i / 8 });
-    }
-
-    function resize() {
-      const w = view.clientWidth, h = view.clientHeight;
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-    }
-    window.addEventListener('resize', resize);
-    resize();
-    return true;
+  // Fungsi membuat busur silinder dengan sumbu sepanjang X
+  function sectorX(rIn, rOut, a0, a1, lenX, material) {
+    const s = new THREE.Shape();
+    s.absarc(0, 0, rOut, a0, a1, false);
+    s.absarc(0, 0, rIn, a1, a0, true);
+    const g = new THREE.ExtrudeGeometry(s, { depth: lenX, bevelEnabled: false, curveSegments: 28 });
+    g.translate(0, 0, -lenX / 2);
+    g.rotateY(Math.PI / 2); // putar agar sumbu ekstrusi sejajar sumbu X
+    return new THREE.Mesh(g, material);
   }
 
-  const ok3D = init3D();
+  const labels = [];
+  function addLabel(text, parent, x, y, z, cls = '') {
+    const anchor = new THREE.Object3D();
+    anchor.position.set(x, y, z);
+    parent.add(anchor);
+    const el = document.createElement('div');
+    el.className = 'lbl' + (cls ? ' ' + cls : '');
+    el.textContent = text;
+    view.appendChild(el);
+    labels.push({ el, anchor });
+  }
 
-  // UI Sinkronisasi
+  // 1. Kelompok Poros Berputar (Sepanjang Sumbu X: dari x = -2.6 sampai x = +2.6)
+  const rotorGroup = new THREE.Group();
+  scene.add(rotorGroup);
+
+  const mainShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 5.2, 24), M.shaft);
+  mainShaft.rotation.z = Math.PI / 2;
+  rotorGroup.add(mainShaft);
+
+  // Inti Rotor & Kumparan Jangkar di Tengah (x = -0.35 s/d +0.75)
+  const rotorCore = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.35, 32), M.core);
+  rotorCore.rotation.z = Math.PI / 2;
+  rotorCore.position.x = 0.15;
+  rotorGroup.add(rotorCore);
+
+  const coilMeshes = [];
+  const currentDots = [];
+  for (let k = 0; k < 2; k++) {
+    const ang = k * (Math.PI / 2);
+    const cGroup = new THREE.Group();
+    cGroup.position.x = 0.15;
+    cGroup.rotation.x = ang;
+
+    const topBar = new THREE.Mesh(new THREE.BoxGeometry(1.38, 0.11, 0.11), M.copper.clone());
+    topBar.position.y = 0.48;
+    const botBar = new THREE.Mesh(new THREE.BoxGeometry(1.38, 0.11, 0.11), M.copper.clone());
+    botBar.position.y = -0.48;
+    const leftBar = new THREE.Mesh(new THREE.BoxGeometry(0.11, 1.05, 0.11), M.copper.clone());
+    leftBar.position.x = -0.65;
+    const rightBar = new THREE.Mesh(new THREE.BoxGeometry(0.11, 1.05, 0.11), M.copper.clone());
+    rightBar.position.x = 0.65;
+
+    cGroup.add(topBar, botBar, leftBar, rightBar);
+    rotorGroup.add(cGroup);
+    coilMeshes.push(topBar, botBar, leftBar, rightBar);
+
+    // Titik-titik kuning aliran arus ia pada kumparan pertama
+    if (k === 0) {
+      const rectPath = new THREE.CurvePath();
+      const p1 = new THREE.Vector3(-0.65, 0.48, 0);
+      const p2 = new THREE.Vector3(0.65, 0.48, 0);
+      const p3 = new THREE.Vector3(0.65, -0.48, 0);
+      const p4 = new THREE.Vector3(-0.65, -0.48, 0);
+      rectPath.add(new THREE.LineCurve3(p1, p2));
+      rectPath.add(new THREE.LineCurve3(p2, p3));
+      rectPath.add(new THREE.LineCurve3(p3, p4));
+      rectPath.add(new THREE.LineCurve3(p4, p1));
+      for (let i = 0; i < 10; i++) {
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfde047 }));
+        cGroup.add(dot);
+        currentDots.push({ m: dot, path: rectPath, t: i / 10 });
+      }
+    }
+  }
+
+  // Komutator di sebelah kiri kumparan (x = -0.85)
+  const commGroup = new THREE.Group();
+  commGroup.position.x = -0.85;
+  rotorGroup.add(commGroup);
+  for (let i = 0; i < 4; i++) {
+    const a0 = (i * Math.PI) / 2 + 0.08;
+    const seg = sectorX(0.18, 0.27, a0, a0 + Math.PI / 2 - 0.16, 0.32, M.comm);
+    commGroup.add(seg);
+  }
+
+  // 2. Stator Magnet N & S serta Sikat Karbon (Diam di Tengah)
+  const statorGroup = new THREE.Group();
+  statorGroup.position.x = 0.15;
+  scene.add(statorGroup);
+
+  const magN = sectorX(0.75, 0.98, Math.PI / 2 - 0.65, Math.PI / 2 + 0.65, 1.45, M.north);
+  const magS = sectorX(0.75, 0.98, -Math.PI / 2 - 0.65, -Math.PI / 2 + 0.65, 1.45, M.south);
+  statorGroup.add(magN, magS);
+
+  const housingMesh = sectorX(0.99, 1.09, 0, Math.PI * 2, 1.6, M.housing);
+  housingMesh.position.x = 0.15;
+  scene.add(housingMesh);
+
+  const brushTop = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.2), M.carbon);
+  brushTop.position.set(-0.85, 0.36, 0);
+  const brushBot = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.2), M.carbon);
+  brushBot.position.set(-0.85, -0.36, 0);
+  scene.add(brushTop, brushBot);
+
+  // Label Motor DC di Tengah Atas
+  addLabel('Motor DC (Kumparan ia & Magnet N–S)', statorGroup, 0, 1.25, 0, 'key');
+
+  // 3. Piringan Encoder & Kepala Sensor di Ujung Kiri (x = -2.15)
+  const encDiscGroup = new THREE.Group();
+  encDiscGroup.position.x = -2.15;
+  rotorGroup.add(encDiscGroup);
+
+  const discMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.06, 36), M.disc);
+  discMesh.rotation.z = Math.PI / 2;
+  encDiscGroup.add(discMesh);
+
+  for (let i = 0; i < 12; i++) {
+    const a0 = (i * Math.PI * 2) / 12;
+    const slot = sectorX(0.45, 0.64, a0, a0 + 0.16, 0.075, M.slot);
+    encDiscGroup.add(slot);
+  }
+
+  const encHead = new THREE.Group();
+  encHead.position.set(-2.15, 0.74, 0);
+  scene.add(encHead);
+  const headBox = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 0.32), mat(0x22c55e));
+  encHead.add(headBox);
+  addLabel('Sensor Encoder (Baca ωaktual)', encHead, -0.15, 0.35, 0, 'key');
+
+  // 4. Roda Gila Beban (Flywheel) & Sepatu Rem Mekanis di Ujung Kanan (x = +2.15)
+  const wheelGroup = new THREE.Group();
+  wheelGroup.position.x = 2.15;
+  rotorGroup.add(wheelGroup);
+
+  const wheelMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.32, 36), M.wheel);
+  wheelMesh.rotation.z = Math.PI / 2;
+  wheelGroup.add(wheelMesh);
+
+  for (let i = 0; i < 4; i++) {
+    const marker = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.38, 0.09), mat(0x38bdf8));
+    marker.rotation.x = (i * Math.PI) / 2;
+    wheelGroup.add(marker);
+  }
+
+  const brakeTop = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.2, 0.45), M.brake);
+  brakeTop.position.set(2.15, 1.02, 0);
+  const brakeBot = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.2, 0.45), M.brake);
+  brakeBot.position.set(2.15, -1.02, 0);
+  scene.add(brakeTop, brakeBot);
+
+  const brakeGlow = sectorX(0.72, 0.81, 0, Math.PI * 2, 0.34, new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0 }));
+  brakeGlow.position.x = 2.15;
+  scene.add(brakeGlow);
+
+  addLabel('Roda Beban & Rem Poros (Tload)', brakeTop, 0.1, 0.32, 0, 'warn');
+
+  // 5. Papan PCB Mikrokontroler (PID) & Driver PWM di Depan-Bawah (z = +1.35, y = -1.15)
+  const pcbGroup = new THREE.Group();
+  pcbGroup.position.set(-0.55, -1.18, 1.35);
+  scene.add(pcbGroup);
+
+  const pcbBoard = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 0.95), M.pcb);
+  pcbGroup.add(pcbBoard);
+
+  const mcuChip = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.14, 0.55), M.chip);
+  mcuChip.position.set(-0.65, 0.1, 0);
+  pcbGroup.add(mcuChip);
+
+  const drvChip = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.24, 0.58), mat(0xb45309));
+  drvChip.position.set(0.65, 0.15, 0);
+  pcbGroup.add(drvChip);
+
+  addLabel('Mikrokontroler (PID) & Driver PWM (ea)', pcbGroup, 0, -0.32, 0.45, 'key');
+
+  // Kabel Umpan Balik Hijau (Encoder -> MCU) & Kabel Daya Oranye (Driver -> Sikat Motor)
+  const fbCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-2.15, 0.74, 0.16),
+    new THREE.Vector3(-2.15, -0.4, 1.1),
+    new THREE.Vector3(-1.2, -1.08, 1.35)
+  ]);
+  const pwmCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.1, -1.08, 1.35),
+    new THREE.Vector3(-0.45, -0.75, 0.8),
+    new THREE.Vector3(-0.85, -0.36, 0.1)
+  ]);
+  scene.add(new THREE.Mesh(new THREE.TubeGeometry(fbCurve, 24, 0.025, 8, false), new THREE.MeshBasicMaterial({ color: 0x22c55e })));
+  scene.add(new THREE.Mesh(new THREE.TubeGeometry(pwmCurve, 24, 0.03, 8, false), new THREE.MeshBasicMaterial({ color: 0xf59e0b })));
+
+  const fbPulses = [], pwmPulses = [];
+  for (let i = 0; i < 6; i++) {
+    const p1 = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), new THREE.MeshBasicMaterial({ color: 0x4ade80 }));
+    scene.add(p1);
+    fbPulses.push({ m: p1, t: i / 6 });
+
+    const p2 = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
+    scene.add(p2);
+    pwmPulses.push({ m: p2, t: i / 6 });
+  }
+
+  // ---------- Kontrol UI & Preset ----------
   const refSlider = $('refSlider'), kpSlider = $('kpSlider'), kiSlider = $('kiSlider'), kdSlider = $('kdSlider');
-  const loadSlider = $('loadSlider'), expSlider = $('expSlider'), btnToggleLoad = $('btnToggleLoad');
+  const loadSlider = $('loadSlider'), expSlider = $('expSlider');
+  const btnPOnly = $('btnPOnly'), btnPI = $('btnPI'), btnPID = $('btnPID'), btnToggleLoad = $('btnToggleLoad');
 
-  function syncLabels() {
+  function highlightPreset(activeBtn) {
+    [btnPOnly, btnPI, btnPID].forEach(b => b.classList.toggle('on', b === activeBtn));
+  }
+
+  function syncUI() {
     wRef = parseFloat(refSlider.value);
     loadTorque = parseFloat(loadSlider.value);
     expl = parseFloat(expSlider.value) / 100;
+
     $('refVal').textContent = `${wRef} RPM`;
     $('kpVal').textContent = fmt(parseFloat(kpSlider.value), 2);
     $('kiVal').textContent = fmt(parseFloat(kiSlider.value), 2);
@@ -446,35 +521,46 @@
     $('expVal').textContent = `${Math.round(expl * 100)}%`;
 
     btnToggleLoad.textContent = loadTorque > 0
-      ? `🔥 Lepaskan Beban Rem (Beban Aktif = ${fmt(loadTorque, 2)} Nm)`
-      : '🏋️ Beri Beban Rem Poros (T_load = 0,00 Nm)';
+      ? `🔥 Lepaskan Beban Rem (Aktif = ${fmt(loadTorque, 2)} Nm)`
+      : '🏋️ Beri Beban Rem Poros (Tload = 0,00 Nm)';
     btnToggleLoad.classList.toggle('active', loadTorque > 0);
   }
 
-  [refSlider, kpSlider, kiSlider, kdSlider, loadSlider, expSlider].forEach(el => el.addEventListener('input', syncLabels));
-
-  $('btnPOnly').addEventListener('click', () => {
-    wRef = 1000; refSlider.value = 1000;
-    kpSlider.value = 0.18; kiSlider.value = 0.00; kdSlider.value = 0.000;
-    integErr = 0; loadSlider.value = 0;
-    syncLabels();
+  [refSlider, kpSlider, kiSlider, kdSlider, loadSlider, expSlider].forEach(el => {
+    el.addEventListener('input', syncUI);
   });
 
-  $('btnPI').addEventListener('click', () => {
+  btnPOnly.addEventListener('click', () => {
     wRef = 1000; refSlider.value = 1000;
-    kpSlider.value = 0.18; kiSlider.value = 0.45; kdSlider.value = 0.000;
-    syncLabels();
+    kpSlider.value = 0.22; kiSlider.value = 0.00; kdSlider.value = 0.000;
+    integErr = 0; wActual = 0; dWFiltered = 0;
+    highlightPreset(btnPOnly);
+    syncUI();
   });
 
-  $('btnPID').addEventListener('click', () => {
+  btnPI.addEventListener('click', () => {
     wRef = 1000; refSlider.value = 1000;
-    kpSlider.value = 0.18; kiSlider.value = 0.45; kdSlider.value = 0.015;
-    syncLabels();
+    kpSlider.value = 0.22; kiSlider.value = 0.45; kdSlider.value = 0.000;
+    integErr = 0; wActual = 0; dWFiltered = 0;
+    highlightPreset(btnPI);
+    syncUI();
+  });
+
+  btnPID.addEventListener('click', () => {
+    wRef = 1000; refSlider.value = 1000;
+    kpSlider.value = 0.22; kiSlider.value = 0.45; kdSlider.value = 0.008;
+    integErr = 0; wActual = 0; dWFiltered = 0;
+    highlightPreset(btnPID);
+    syncUI();
   });
 
   btnToggleLoad.addEventListener('click', () => {
-    loadSlider.value = parseFloat(loadSlider.value) > 0 ? 0.00 : 0.35;
-    syncLabels();
+    loadSlider.value = parseFloat(loadSlider.value) > 0 ? 0.00 : 0.25;
+    syncUI();
+  });
+
+  $('btnReset').addEventListener('click', () => {
+    wActual = 0; integErr = 0; dWFiltered = 0; hist.length = 0;
   });
 
   $('btnLbl').addEventListener('click', e => {
@@ -482,19 +568,26 @@
     e.target.classList.toggle('on', showLabels);
   });
 
-  $('btnCut').addEventListener('click', e => {
+  $('btnHousing').addEventListener('click', e => {
     cutaway = !cutaway;
     e.target.classList.toggle('on', cutaway);
-    if (housingMesh) housingMesh.material.opacity = cutaway ? 0.22 : 0.85;
+    housingMesh.material.opacity = cutaway ? 0.2 : 0.82;
   });
 
-  function stepPhysics() {
-    const dt = 0.02;
+  $('btnCam').addEventListener('click', () => {
+    resetCameraPos();
+    controls.target.set(0, -0.15, 0.15);
+    controls.update();
+  });
+
+  // ---------- Simulasi Fisika dengan Sub-Stepping (Bebas Osilasi Numerik) ----------
+  function stepSub(dt) {
     const Kp = parseFloat(kpSlider.value);
     const Ki = parseFloat(kiSlider.value);
     const Kd = parseFloat(kdSlider.value);
 
     const err = wRef - wActual;
+
     if (Ki > 0) {
       integErr += err * dt;
       integErr = Math.max(-60, Math.min(60, integErr));
@@ -502,127 +595,148 @@
       integErr = 0;
     }
 
-    const dW = (wActual - prevW) / dt;
-    prevW = wActual;
-
-    ea = Kp * err + Ki * integErr - Kd * dW;
+    // Sinyal kontrol tegangan jangkar ea (0 - 24 V) dengan Derivative on Measurement terfilter
+    ea = Kp * err + Ki * integErr - Kd * dWFiltered;
     ea = Math.max(0, Math.min(24.0, ea));
 
+    // Back-EMF dan Arus Jangkar
     eb = Kb * wActual;
     ia = Math.max(0, (ea - eb) / Ra);
+
+    // Torsi Motor dan Hukum II Newton Rotasi
     torque = Kt * ia;
-
     const netTorque = torque - (b0 * wActual) - loadTorque;
-    const dw_dt = (netTorque / J0) * 6.0;
+    const dw_dt = (netTorque / J0) * 180.0; // skala percepatan RPM/s
+
+    // Low-pass filter untuk laju perubahan kecepatan (mencegah derau/chattering pada suku D)
+    dWFiltered = 0.92 * dWFiltered + 0.08 * dw_dt;
+
     wActual = Math.max(0, wActual + dw_dt * dt);
-
-    rotorAngle += (wActual * Math.PI * 2) / (60 * 60);
-
-    history.push({ wRef, wActual, ea, eb, ia });
-    if (history.length > maxHist) history.shift();
-
-    // Update Kartu Metrik
-    $('rpmMetric').textContent = `${Math.round(wActual)} RPM`;
-    const eNow = Math.round(wRef - wActual);
-    $('errMetric').textContent = `Steady-State Error: ${eNow} RPM`;
-    $('eaMetric').textContent = `${fmt(ea, 1)} V`;
-    $('pwmSub').textContent = `Duty Cycle: ${Math.round((ea / 24) * 100)}% (Maks 24 V)`;
-    $('ebMetric').textContent = `${fmt(eb, 1)} V`;
-    $('iaMetric').textContent = `${fmt(ia, 2)} A`;
-    $('torqueMetric').textContent = `${fmt(torque, 2)} Nm`;
-    $('loadSub').textContent = `Beban Luar: ${fmt(loadTorque, 2)} Nm`;
+    shaftAngle += (wActual * Math.PI * 2 / 60) * dt * 0.035; // diperlambat 30x agar visual 3D jelas
   }
 
-  const teleCanvas = $('teleCanvas');
-  const tCtx = teleCanvas.getContext('2d');
+  // ---------- Grafik Telemetri 2D Multi-Kanal ----------
+  const hist = [];
+  const HMAX = 480;
+  const cv = $('chartCanvas'), cx = cv.getContext('2d');
 
-  function drawTelemetry() {
-    tCtx.clearRect(0, 0, teleCanvas.width, teleCanvas.height);
-    const w = teleCanvas.width, h = teleCanvas.height;
-    const padL = 42, padR = 16, padT = 26, padB = 24;
-    const pw = w - padL - padR, ph = h - padT - padB;
+  function drawChart() {
+    const w = cv.width, h = cv.height;
+    const x0 = 56, x1 = w - 18, y0 = 16, y1 = h - 24;
+    const pw = x1 - x0, ph = y1 - y0;
 
-    tCtx.strokeStyle = '#1e293b';
-    tCtx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-      const y = padT + (i / 4) * ph;
-      tCtx.beginPath(); tCtx.moveTo(padL, y); tCtx.lineTo(w - padR, y); tCtx.stroke();
+    cx.clearRect(0, 0, w, h);
+
+    // Garis Grid & Skala
+    cx.strokeStyle = '#1e293b';
+    cx.lineWidth = 1;
+    cx.fillStyle = '#64748b';
+    cx.font = '11px sans-serif';
+    for (let k = 0; k <= 4; k++) {
+      const y = y0 + (ph * k) / 4;
+      cx.beginPath(); cx.moveTo(x0, y); cx.lineTo(x1, y); cx.stroke();
+      const rpmTick = Math.round(1600 * (1 - k / 4));
+      cx.fillText(`${rpmTick}`, 14, y + 4);
     }
 
-    tCtx.font = 'bold 11px sans-serif';
-    tCtx.fillStyle = '#94a3b8'; tCtx.fillText('--- ωref', padL + 4, 16);
-    tCtx.fillStyle = '#22c55e'; tCtx.fillText('─── ω (RPM)', padL + 75, 16);
-    tCtx.fillStyle = '#f59e0b'; tCtx.fillText('─── PWM ea (V)', padL + 175, 16);
-    tCtx.fillStyle = '#c084fc'; tCtx.fillText('─── Back-EMF eb (V)', padL + 290, 16);
-    tCtx.fillStyle = '#ef4444'; tCtx.fillText('─── Arus ia (A)', padL + 425, 16);
-
-    const plotLine = (fnY, color, dashed = false, width = 2.4) => {
-      tCtx.beginPath();
-      tCtx.strokeStyle = color;
-      tCtx.lineWidth = width;
-      tCtx.setLineDash(dashed ? [5, 5] : []);
-      for (let i = 0; i < history.length; i++) {
-        const x = padL + (i / (maxHist - 1)) * pw;
-        const norm = Math.max(0, Math.min(1, fnY(history[i])));
-        const y = padT + ph - norm * ph;
-        if (i === 0) tCtx.moveTo(x, y);
-        else tCtx.lineTo(x, y);
+    const plotSeries = (fnNorm, color, dashed = false, width = 2.4) => {
+      if (hist.length < 2) return;
+      cx.beginPath();
+      cx.strokeStyle = color;
+      cx.lineWidth = width;
+      cx.setLineDash(dashed ? [6, 5] : []);
+      for (let i = 0; i < hist.length; i++) {
+        const x = x0 + (i / (HMAX - 1)) * pw;
+        const norm = Math.max(0, Math.min(1.05, fnNorm(hist[i])));
+        const y = y1 - norm * ph;
+        if (i === 0) cx.moveTo(x, y);
+        else cx.lineTo(x, y);
       }
-      tCtx.stroke();
-      tCtx.setLineDash([]);
+      cx.stroke();
+      cx.setLineDash([]);
     };
 
-    plotLine(d => d.wRef / 1600, '#94a3b8', true, 1.8);
-    plotLine(d => d.wActual / 1600, '#22c55e', false, 2.8);
-    plotLine(d => d.ea / 26, '#f59e0b', false, 2.0);
-    plotLine(d => d.eb / 26, '#c084fc', false, 1.8);
-    plotLine(d => d.ia / 8, '#ef4444', false, 2.2);
+    plotSeries(p => p.wRef / 1600, '#94a3b8', true, 1.8);
+    plotSeries(p => p.wActual / 1600, '#22c55e', false, 2.8);
+    plotSeries(p => p.ea / 26, '#f59e0b', false, 2.0);
+    plotSeries(p => p.eb / 26, '#c084fc', false, 1.9);
+    plotSeries(p => p.ia / 8, '#ef4444', false, 2.2);
   }
 
-  const tmpV = ok3D ? new THREE.Vector3() : null;
+  // ---------- Loop Animasi Utama ----------
+  const tmpV = new THREE.Vector3();
+  let lastTime = performance.now();
 
-  function update3D() {
-    if (!ok3D) return;
-    rotorGroup.rotation.z = -rotorAngle;
+  function animate(now) {
+    const dtReal = Math.min(0.04, (now - lastTime) / 1000);
+    lastTime = now;
 
-    // Exploded view
-    statorGroup.children[0].position.x = -0.85 * expl;
-    statorGroup.children[1].position.x = 0.85 * expl;
-    encDiscGroup.position.z = -1.55 - 0.55 * expl;
-    flywheelMesh.position.z = 1.55 + 0.55 * expl;
+    // 25 sub-steps per frame menjamin integrasi diferensial mulus tanpa osilasi numerik
+    const subSteps = 25;
+    for (let i = 0; i < subSteps; i++) {
+      stepSub(dtReal / subSteps);
+    }
 
-    // Sepatu rem menekan roda beban saat loadTorque > 0
-    const clampOffset = loadTorque > 0 ? Math.min(0.18, loadTorque * 0.45) : 0;
-    brakePadTop.position.y = 0.92 - clampOffset;
-    brakePadBot.position.y = -0.92 + clampOffset;
-    brakePadTop.position.z = flywheelMesh.position.z;
-    brakePadBot.position.z = flywheelMesh.position.z;
-    brakeGlow.position.z = flywheelMesh.position.z;
-    brakeGlow.material.opacity = Math.min(0.65, loadTorque * 1.3);
+    hist.push({ wRef, wActual, ea, eb, ia });
+    if (hist.length > HMAX) hist.shift();
 
-    // Warna pijar kumparan sebanding arus jangkar ia
-    const glowFactor = Math.min(1, ia / 5.0);
-    coilMeshes.forEach(c => {
-      c.material.color.setRGB(0.96, 0.62 - glowFactor * 0.38, 0.04);
-    });
+    // Putar poros 3D
+    rotorGroup.rotation.x = shaftAngle;
 
-    // Animasi titik pulsa PWM & Feedback Encoder
-    const pwmSpeed = 0.004 + (ea / 24) * 0.022;
-    pwmDots.forEach(d => {
-      d.t = (d.t + pwmSpeed) % 1;
+    // Exploded view 3D sepanjang sumbu X & Y
+    magN.position.y = 0.55 * expl;
+    magS.position.y = -0.55 * expl;
+    encDiscGroup.position.x = -2.15 - 0.55 * expl;
+    encHead.position.x = -2.15 - 0.55 * expl;
+    wheelGroup.position.x = 2.15 + 0.55 * expl;
+
+    // Animasi Sepatu Rem Menjepit Roda Beban
+    const clamp = loadTorque > 0 ? Math.min(0.18, loadTorque * 0.5) : 0;
+    brakeTop.position.set(wheelGroup.position.x, 1.02 - clamp, 0);
+    brakeBot.position.set(wheelGroup.position.x, -1.02 + clamp, 0);
+    brakeGlow.position.x = wheelGroup.position.x;
+    brakeGlow.material.opacity = Math.min(0.65, loadTorque * 1.5);
+
+    // Animasi titik arus jangkar ia & pulsa kabel
+    const iaNorm = Math.min(1, ia / 4.5);
+    currentDots.forEach(d => {
+      d.t = (d.t + dtReal * (0.3 + iaNorm * 2.2)) % 1;
       d.m.position.copy(d.path.getPointAt(d.t));
-      d.m.scale.setScalar(0.7 + glowFactor * 0.7);
+    });
+    fbPulses.forEach(p => {
+      p.t = (p.t + dtReal * (0.2 + (wActual / 1400) * 1.8)) % 1;
+      p.m.position.copy(fbCurve.getPointAt(p.t));
+    });
+    pwmPulses.forEach(p => {
+      p.t = (p.t + dtReal * (0.2 + (ea / 24) * 2.0)) % 1;
+      p.m.position.copy(pwmCurve.getPointAt(p.t));
     });
 
-    const fbSpeed = 0.002 + (wActual / 1500) * 0.022;
-    fbDots.forEach(d => {
-      d.t = (d.t + fbSpeed) % 1;
-      d.m.position.copy(d.path.getPointAt(d.t));
-    });
+    // Update Angka Kartu
+    const errNow = Math.round(wRef - wActual);
+    $('mW').textContent = `${Math.round(wActual)} RPM`;
+    $('mErr').textContent = `Target: ${wRef} RPM · Error: ${errNow} RPM`;
+    $('mEa').textContent = `${fmt(ea, 1)} V`;
+    $('mPwm').textContent = `Duty Cycle PWM: ${Math.round((ea / 24) * 100)}% (Suplai Maks 24 V)`;
+    $('mEb').textContent = `${fmt(eb, 1)} V`;
+    $('mIa').textContent = `${fmt(ia, 2)} A`;
+    $('mT').textContent = `${fmt(torque, 2)} Nm`;
+    $('mTS').textContent = `Beban rem: ${fmt(loadTorque, 2)} Nm + gesekan poros`;
 
+    // Update Kotak Status Dinamis
+    const Ki = parseFloat(kiSlider.value);
+    if (Ki === 0 && Math.abs(errNow) > 25) {
+      $('statusBox').innerHTML = `<b>Kontroler P Murni (Tanpa Integral):</b> Kecepatan tertahan di <b>${Math.round(wActual)} RPM</b> (kurang ${errNow} RPM dari target ${wRef} RPM). Pada titik ini tegangan <i>ea = ${fmt(ea, 1)} V</i> dikurangi <i>Back-EMF eb = ${fmt(eb, 1)} V</i> hanya menyisakan arus <i>ia = ${fmt(ia, 2)} A</i> yang habis untuk melawan gesekan dan beban. Aktifkan <b>Kontroler PI / PID</b> untuk menghapus sisa error ini!`;
+    } else if (loadTorque > 0) {
+      $('statusBox').innerHTML = `<b>Beban Rem Poros Aktif (${fmt(loadTorque, 2)} Nm):</b> Sepatu rem menahan roda beban sehingga mikrokontroler PID menaikkan tegangan PWM menjadi <b>${fmt(ea, 1)} V</b>. Selisih <i>(ea − eb)</i> membesar dan mendorong arus jangkar naik ke <b>${fmt(ia, 2)} A</b> untuk menghasilkan torsi <b>${fmt(torque, 2)} Nm</b> agar kecepatan bertahan di <b>${Math.round(wActual)} RPM</b>.`;
+    } else {
+      $('statusBox').innerHTML = `<b>Putaran Stabil Terkendali:</b> Kecepatan poros berada di <b>${Math.round(wActual)} RPM</b> dengan <i>Back-EMF eb = ${fmt(eb, 1)} V</i> dan arus jangkar ringan <i>ia = ${fmt(ia, 2)} A</i>. Tekan tombol <b>🏋️ Beri Beban Rem Poros</b> untuk melihat bagaimana arus dan torsi melonjak saat menghadapi beban.`;
+    }
+
+    // Update Posisi Label 3D
     labels.forEach(l => {
       if (!showLabels) { l.el.style.display = 'none'; return; }
-      l.obj.getWorldPosition(tmpV);
+      l.anchor.getWorldPosition(tmpV);
       tmpV.project(camera);
       if (tmpV.z > 1) { l.el.style.display = 'none'; return; }
       l.el.style.display = 'block';
@@ -632,19 +746,21 @@
 
     controls.update();
     renderer.render(scene, camera);
-  }
-
-  function animate() {
-    stepPhysics();
-    update3D();
-    drawTelemetry();
+    drawChart();
     requestAnimationFrame(animate);
   }
 
-  syncLabels();
-  animate();
+  function resize() {
+    const w = view.clientWidth, h = view.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  syncUI();
+  requestAnimationFrame(animate);
 })();
 </script>
-
 </body>
 </html>
