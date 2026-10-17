@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulator Fisika Motor DC: Tegangan (Volt), Arus (Ampere), Back-EMF, Torsi & PID</title>
+  <title>Simulator 3D: Fisika Motor DC & Kendali Kecepatan PID</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -19,103 +19,137 @@
     }
     * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
     body {
-      margin: 0; padding: 18px;
+      margin: 0; padding: 16px;
       background: var(--bg); color: var(--text);
       display: flex; justify-content: center;
     }
     .container {
-      max-width: 1060px; width: 100%;
+      max-width: 1180px; width: 100%;
       background: var(--panel); border-radius: 12px;
-      padding: 20px; border: 1px solid #334155;
+      padding: 18px; border: 1px solid #334155;
       box-shadow: 0 10px 25px rgba(0,0,0,0.45);
     }
-    h2 { margin-top: 0; margin-bottom: 6px; font-size: 1.3rem; color: var(--accent); }
-    .sub { margin-top: 0; margin-bottom: 14px; font-size: 0.88rem; color: var(--muted); }
+    h2 { margin: 0 0 4px; font-size: 1.3rem; color: var(--accent); }
+    .sub { margin: 0 0 12px; font-size: 0.88rem; color: var(--muted); }
     .preset-bar {
       display: flex; flex-wrap: wrap; gap: 8px;
-      background: #0f172a; padding: 12px; border-radius: 8px;
-      margin-bottom: 14px; border: 1px solid #334155;
+      background: #0f172a; padding: 11px 12px; border-radius: 8px;
+      margin-bottom: 12px; border: 1px solid #334155; align-items: center;
     }
     button {
-      padding: 8px 13px; border-radius: 6px; border: 1px solid #475569;
-      background: #1e293b; color: white; font-size: 0.83rem; font-weight: 600;
+      padding: 7px 11px; border-radius: 6px; border: 1px solid #475569;
+      background: #1e293b; color: #f8fafc; font-size: 0.8rem; font-weight: 600;
       cursor: pointer; transition: 0.15s;
     }
     button:hover { background: #334155; }
+    button.on { border-color: var(--accent); background: rgba(56,189,248,0.16); color: #7dd3fc; }
     .btn-p { border-color: #f59e0b; color: #fbbf24; }
     .btn-pi { border-color: #38bdf8; color: #7dd3fc; }
     .btn-pid { border-color: #22c55e; color: #4ade80; }
     .btn-load { border-color: #ef4444; color: #f87171; }
+    .btn-load.active { background: rgba(239,68,68,0.22); color: #fca5a5; }
 
     .controls {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
-      gap: 12px; background: #0f172a; padding: 14px; border-radius: 8px;
-      margin-bottom: 16px; border: 1px solid #334155;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 12px; background: #0f172a; padding: 12px 14px; border-radius: 8px;
+      margin-bottom: 14px; border: 1px solid #334155;
     }
-    .control-group { display: flex; flex-direction: column; gap: 5px; }
-    label { font-size: 0.8rem; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+    .control-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 0.78rem; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
     label strong { color: var(--accent); font-family: monospace; }
     input[type="range"] { width: 100%; }
 
     .dashboard {
       display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
-    @media (max-width: 860px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 900px) { .dashboard { grid-template-columns: repeat(2, 1fr); } }
     .card {
       background: var(--card); border: 1px solid #334155;
-      border-radius: 8px; padding: 10px; text-align: center;
+      border-radius: 8px; padding: 9px 10px; text-align: center;
     }
-    .c-title { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
-    .c-val { font-size: 1.35rem; font-weight: bold; margin-top: 4px; font-family: monospace; }
-    .c-sub { font-size: 0.72rem; color: #64748b; margin-top: 2px; }
+    .c-title { font-size: 0.71rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+    .c-val { font-size: 1.28rem; font-weight: bold; margin-top: 3px; font-family: monospace; }
+    .c-sub { font-size: 0.71rem; color: #64748b; margin-top: 2px; }
 
     .main-grid {
-      display: grid; grid-template-columns: 260px 1fr; gap: 16px;
+      display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px;
     }
-    @media (max-width: 820px) { .main-grid { grid-template-columns: 1fr; } }
-    .box {
+    @media (max-width: 960px) { .main-grid { grid-template-columns: 1fr; } }
+    .view3d {
+      position: relative; background: #0b1220; border: 1px solid #334155;
+      border-radius: 8px; height: 390px; overflow: hidden;
+    }
+    .view3d canvas { display: block; width: 100%; height: 100%; }
+    .hint {
+      position: absolute; left: 10px; bottom: 8px;
+      font-size: 0.74rem; color: #64748b; pointer-events: none;
+    }
+    .toolbar3d {
+      position: absolute; right: 10px; top: 8px;
+      display: flex; gap: 6px; z-index: 2;
+    }
+    .lbl {
+      position: absolute; transform: translate(-50%, -100%);
+      pointer-events: none; font-size: 0.71rem; font-weight: 700;
+      color: #e2e8f0; background: rgba(15,23,42,0.85);
+      border: 1px solid #475569; border-radius: 5px;
+      padding: 2px 6px; white-space: nowrap;
+    }
+    .lbl.key { border-color: var(--accent); color: #7dd3fc; }
+    .lbl.warn { border-color: var(--amp); color: #fca5a5; }
+
+    .box-chart {
       background: var(--card); border: 1px solid #334155;
       border-radius: 8px; padding: 12px; display: flex;
-      flex-direction: column; align-items: center; justify-content: center;
+      flex-direction: column; justify-content: space-between;
     }
-    canvas { max-width: 100%; border-radius: 6px; display: block; }
+    .box-chart canvas { width: 100%; height: auto; border-radius: 6px; display: block; }
     .explain {
-      margin-top: 14px; padding: 13px 16px; background: #0f172a;
+      margin-top: 10px; padding: 11px 14px; background: #0f172a;
       border-left: 4px solid var(--rpm); border-radius: 6px;
-      font-size: 0.88rem; line-height: 1.55; color: #e2e8f0;
+      font-size: 0.84rem; line-height: 1.5; color: #e2e8f0;
     }
+    .err { color: #f87171; padding: 30px; text-align: center; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Simulator Fisika Motor DC: Tegangan (ea), Back-EMF (eb), Arus (ia), Torsi & PID</h2>
-  <p class="sub">Rumus Kunci: <strong>ia = (ea − Kb·ω) / Ra</strong> dan <strong>Torsi T = Kt · ia</strong>. Amati mengapa kontroler P murni tertahan di ~940 RPM dan bagaimana Ampere melonjak saat diberi beban!</p>
+  <h2>Simulator 3D: Fisika Motor DC & Kendali Kecepatan PID (Volt, Ampere, Back-EMF, Torsi)</h2>
+  <p class="sub">Rumus Kunci: <strong>ia = (ea − Kb·ω) ÷ Ra</strong> dan <strong>Torsi T = Kt · ia</strong>. Amati dalam 3D bagaimana mikrokontroler membaca piringan encoder, mengatur PWM ke driver, serta menaikkan arus dan torsi saat sepatu rem menekan roda beban.</p>
 
   <div class="preset-bar">
-    <button class="btn-p" id="btnPOnly">1. Kontroler P Murni (Tertahan di ~940 RPM karena Gesekan b0)</button>
+    <button class="btn-p" id="btnPOnly">1. Kontroler P Murni (Tertahan ~940 RPM karena Gesekan b)</button>
     <button class="btn-pi" id="btnPI">2. Kontroler P + I (Tembus Tepat 1000 RPM, ess = 0)</button>
-    <button class="btn-pid" id="btnPID">3. Kontroler P + I + D Lengkap (Mendarat Mulus di 1000 RPM)</button>
-    <button class="btn-load" id="btnToggleLoad">🏋️ Beri Beban Rem Poros (T_load = 0.0 Nm)</button>
+    <button class="btn-pid" id="btnPID">3. Kontroler P + I + D Lengkap (Mendarat Mulus 1000 RPM)</button>
+    <button class="btn-load" id="btnToggleLoad">🏋️ Beri Beban Rem Poros (T_load = 0,00 Nm)</button>
   </div>
 
   <div class="controls">
     <div class="control-group">
-      <label>Target Kecepatan (ω_ref): <strong id="refVal">1000 RPM</strong></label>
+      <label>Target Kecepatan (ωref): <strong id="refVal">1000 RPM</strong></label>
       <input type="range" id="refSlider" min="400" max="1500" step="50" value="1000">
     </div>
     <div class="control-group">
-      <label>Gain Proporsional (Kp): <strong id="kpVal">0.18</strong></label>
+      <label>Gain Proporsional (Kp): <strong id="kpVal">0,18</strong></label>
       <input type="range" id="kpSlider" min="0.02" max="0.50" step="0.01" value="0.18">
     </div>
     <div class="control-group">
-      <label>Gain Integral (Ki): <strong id="kiVal">0.45</strong></label>
+      <label>Gain Integral (Ki): <strong id="kiVal">0,45</strong></label>
       <input type="range" id="kiSlider" min="0.00" max="1.20" step="0.05" value="0.45">
     </div>
     <div class="control-group">
-      <label>Gain Derivatif (Kd): <strong id="kdVal">0.015</strong></label>
+      <label>Gain Derivatif (Kd): <strong id="kdVal">0,015</strong></label>
       <input type="range" id="kdSlider" min="0.000" max="0.060" step="0.005" value="0.015">
+    </div>
+    <div class="control-group">
+      <label>Beban Rem Mekanis: <strong id="loadVal">0,00 Nm</strong></label>
+      <input type="range" id="loadSlider" min="0.00" max="0.50" step="0.05" value="0.00">
+    </div>
+    <div class="control-group">
+      <label>Exploded View 3D: <strong id="expVal">0%</strong></label>
+      <input type="range" id="expSlider" min="0" max="100" step="5" value="0">
     </div>
   </div>
 
@@ -127,120 +161,331 @@
     </div>
     <div class="card">
       <div class="c-title">Tegangan Suplai PWM (ea)</div>
-      <div class="c-val" id="eaMetric" style="color:#f59e0b">0.0 V</div>
-      <div class="c-sub">Batas Suplai Maks: 24.0 V</div>
+      <div class="c-val" id="eaMetric" style="color:#f59e0b">0,0 V</div>
+      <div class="c-sub" id="pwmSub">Duty Cycle: 0% (Maks 24 V)</div>
     </div>
     <div class="card">
-      <div class="c-title">GGL Balik / Back-EMF (eb)</div>
-      <div class="c-val" id="ebMetric" style="color:#c084fc">0.0 V</div>
-      <div class="c-sub">eb = Kb · ω (Lawan Tegangan)</div>
+      <div class="c-title">Back-EMF (eb = Kb·ω)</div>
+      <div class="c-val" id="ebMetric" style="color:#c084fc">0,0 V</div>
+      <div class="c-sub">Tegangan Lawan Kumparan</div>
     </div>
     <div class="card">
       <div class="c-title">Arus Jangkar (ia)</div>
-      <div class="c-val" id="iaMetric" style="color:#ef4444">0.00 A</div>
-      <div class="c-sub">ia = (ea - eb) / Ra</div>
+      <div class="c-val" id="iaMetric" style="color:#ef4444">0,00 A</div>
+      <div class="c-sub">ia = (ea − eb) ÷ Ra</div>
     </div>
     <div class="card">
       <div class="c-title">Torsi Putar (T = Kt·ia)</div>
-      <div class="c-val" id="torqueMetric" style="color:#38bdf8">0.00 Nm</div>
-      <div class="c-sub" id="loadSub">Beban Luar: 0.00 Nm</div>
+      <div class="c-val" id="torqueMetric" style="color:#38bdf8">0,00 Nm</div>
+      <div class="c-sub" id="loadSub">Beban Luar: 0,00 Nm</div>
     </div>
   </div>
 
   <div class="main-grid">
-    <div class="box">
-      <canvas id="motorVis" width="235" height="270"></canvas>
+    <div class="view3d" id="view3d">
+      <div class="toolbar3d">
+        <button class="on" id="btnLbl">Label 3D</button>
+        <button class="on" id="btnCut">Buka Rumah Motor</button>
+      </div>
+      <div class="hint">Seret: putar 3D · Scroll: zoom · Klik kanan: geser</div>
     </div>
-    <div class="box">
-      <canvas id="teleCanvas" width="740" height="270"></canvas>
-    </div>
-  </div>
 
-  <div class="explain" id="explainText">
-    <strong>💡 Pengamatan Fisis Motor:</strong> Saat Anda menekan tombol <strong>"🏋️ Beri Beban Rem Poros"</strong>, beban mekanis menahan poros sehingga kecepatan <em>ω</em> sempat turun sedikit. Turunnya <em>ω</em> membuat <strong>Back-EMF (eb)</strong> turun, sementara PID menaikkan tegangan <strong>PWM (ea)</strong>. Akibatnya selisih <em>(ea − eb)</em> membesar dan <strong>Arus Jangkar (ia dalam Ampere)</strong> otomatis melonjak naik untuk menghasilkan <strong>Torsi ekstra (T = Kt·ia)</strong> agar putaran kembali ke 1000 RPM!
+    <div class="box-chart">
+      <canvas id="teleCanvas" width="540" height="255"></canvas>
+      <div class="explain" id="explainText">
+        <strong>💡 Pengamatan 3D & Grafik:</strong> Tekan <strong>"🏋️ Beri Beban Rem Poros"</strong>! Sepatu rem merah di ujung depan poros akan menjepit roda beban sehingga <em>ω</em> turun sesaat. Turunnya <em>ω</em> menurunkan <strong>Back-EMF (eb)</strong>, sedangkan mikrokontroler PID menaikkan <strong>PWM (ea)</strong>. Selisih <em>(ea − eb)</em> membesar sehingga <strong>Arus Jangkar (ia)</strong> melonjak naik menghasilkan <strong>Torsi ekstra (T = Kt·ia)</strong> untuk mengembalikan putaran ke 1000 RPM!
+      </div>
+    </div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-  const motorVis = document.getElementById('motorVis');
-  const mCtx = motorVis.getContext('2d');
-  const teleCanvas = document.getElementById('teleCanvas');
-  const tCtx = teleCanvas.getContext('2d');
-
-  const refSlider = document.getElementById('refSlider');
-  const kpSlider = document.getElementById('kpSlider');
-  const kiSlider = document.getElementById('kiSlider');
-  const kdSlider = document.getElementById('kdSlider');
-
-  const refVal = document.getElementById('refVal');
-  const kpVal = document.getElementById('kpVal');
-  const kiVal = document.getElementById('kiVal');
-  const kdVal = document.getElementById('kdVal');
-
-  const rpmMetric = document.getElementById('rpmMetric');
-  const errMetric = document.getElementById('errMetric');
-  const eaMetric = document.getElementById('eaMetric');
-  const ebMetric = document.getElementById('ebMetric');
-  const iaMetric = document.getElementById('iaMetric');
-  const torqueMetric = document.getElementById('torqueMetric');
-  const loadSub = document.getElementById('loadSub');
-  const btnToggleLoad = document.getElementById('btnToggleLoad');
+(function () {
+  const $ = id => document.getElementById(id);
+  const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
 
   // Parameter Fisik Motor DC 24V
   const Ra = 2.0;       // Ohm
-  const Kb = 0.012;     // V / RPM
-  const Kt = 0.15;      // Nm / Ampere
+  const Kb = 0.012;     // V per RPM
+  const Kt = 0.15;      // Nm per Ampere
   const J0 = 0.0025;    // Inersia
-  const b0 = 0.00016;   // Gesekan viskos alami (membuat P-only tertahan di ~940 RPM)
+  const b0 = 0.00016;   // Gesekan viskos alami
 
   let wRef = 1000;
-  let wActual = 0;      // RPM
+  let wActual = 0;
   let rotorAngle = 0;
   let integErr = 0;
   let prevW = 0;
-  let loadTorque = 0.0; // Nm
+  let loadTorque = 0.0;
+  let ea = 0, eb = 0, ia = 0, torque = 0;
+  let expl = 0;
+  let showLabels = true;
+  let cutaway = true;
 
   const history = [];
-  const maxHist = 340;
+  const maxHist = 300;
+
+  // Setup Three.js 3D Scene
+  const view = $('view3d');
+  let renderer, scene, camera, controls;
+  const labels = [];
+  let rotorGroup, statorGroup, housingMesh, encDiscGroup, flywheelMesh, brakePadTop, brakePadBot, brakeGlow;
+  const pwmDots = [], fbDots = [], coilMeshes = [];
+
+  function init3D() {
+    if (typeof THREE === 'undefined' || !THREE.OrbitControls) {
+      view.innerHTML = '<div class="err">Library 3D gagal dimuat. Periksa koneksi internet Anda.</div>';
+      return false;
+    }
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    view.prepend(renderer.domElement);
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b1220);
+
+    camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    camera.position.set(3.4, 2.5, 4.3);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, -0.15, 0);
+
+    scene.add(new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 0.85));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.95);
+    dl.position.set(5, 8, 6);
+    scene.add(dl);
+    const dl2 = new THREE.DirectionalLight(0x60a5fa, 0.35);
+    dl2.position.set(-5, 3, -4);
+    scene.add(dl2);
+
+    const grid = new THREE.GridHelper(10, 20, 0x1e293b, 0x151e2e);
+    grid.position.y = -1.65;
+    scene.add(grid);
+
+    const mat = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.45, metalness: 0.25 }, o));
+    const M = {
+      north: mat(0xdc2626),
+      south: mat(0x2563eb),
+      copper: mat(0xf59e0b, { metalness: 0.7, roughness: 0.3 }),
+      shaft: mat(0xe2e8f0, { metalness: 0.85, roughness: 0.2 }),
+      core: mat(0x475569, { metalness: 0.6, roughness: 0.4 }),
+      pcb: mat(0x065f46, { roughness: 0.6 }),
+      chip: mat(0x1e293b, { roughness: 0.4 }),
+      disc: mat(0x38bdf8, { metalness: 0.5, roughness: 0.3 }),
+      wheel: mat(0x64748b, { metalness: 0.75, roughness: 0.3 }),
+      brake: mat(0xef4444, { roughness: 0.5 }),
+      housing: new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, transparent: true, opacity: 0.22, depthWrite: false })
+    };
+
+    function sectorZ(rIn, rOut, a0, a1, len, m) {
+      const s = new THREE.Shape();
+      s.absarc(0, 0, rOut, a0, a1, false);
+      s.absarc(0, 0, rIn, a1, a0, true);
+      const g = new THREE.ExtrudeGeometry(s, { depth: len, bevelEnabled: false, curveSegments: 28 });
+      g.translate(0, 0, -len / 2);
+      return new THREE.Mesh(g, m);
+    }
+
+    function addLabel(text, parent, x, y, z, cls = '') {
+      const o = new THREE.Object3D();
+      o.position.set(x, y, z);
+      parent.add(o);
+      const el = document.createElement('div');
+      el.className = 'lbl' + (cls ? ' ' + cls : '');
+      el.textContent = text;
+      view.appendChild(el);
+      labels.push({ el, obj: o });
+      return el;
+    }
+
+    // 1. Stator & Housing Motor DC (tengah Z = 0)
+    statorGroup = new THREE.Group();
+    scene.add(statorGroup);
+    const magN = sectorZ(0.78, 1.02, Math.PI - 0.65, Math.PI + 0.65, 1.4, M.north);
+    const magS = sectorZ(0.78, 1.02, -0.65, 0.65, 1.4, M.south);
+    statorGroup.add(magN, magS);
+    addLabel('Stator Magnet N–S', statorGroup, -0.95, 0.75, 0, 'key');
+
+    housingMesh = sectorZ(1.03, 1.15, 0, Math.PI * 2, 1.55, M.housing);
+    scene.add(housingMesh);
+
+    // 2. Rotor, Poros, Kumparan Jangkar, Piringan Encoder (belakang), & Roda Beban (depan)
+    rotorGroup = new THREE.Group();
+    scene.add(rotorGroup);
+
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 4.2, 20), M.shaft);
+    shaft.rotation.x = Math.PI / 2;
+    rotorGroup.add(shaft);
+
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 1.25, 24), M.core);
+    core.rotation.x = Math.PI / 2;
+    rotorGroup.add(core);
+
+    // 3 Kumparan Jangkar
+    for (let k = 0; k < 3; k++) {
+      const ang = (k * Math.PI) / 3;
+      const coil = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.16, 1.18), M.copper.clone());
+      coil.rotation.z = ang;
+      rotorGroup.add(coil);
+      coilMeshes.push(coil);
+    }
+    addLabel('Kumparan Jangkar (ia → T = Kt·ia)', rotorGroup, 0, 0.68, 0.2, 'key');
+
+    // Piringan Encoder di ujung belakang poros (Z = -1.55)
+    encDiscGroup = new THREE.Group();
+    encDiscGroup.position.z = -1.55;
+    rotorGroup.add(encDiscGroup);
+    const discBase = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.05, 32), mat(0x1e293b));
+    discBase.rotation.x = Math.PI / 2;
+    encDiscGroup.add(discBase);
+    for (let i = 0; i < 12; i++) {
+      const a0 = (i * 2 * Math.PI) / 12;
+      const slot = sectorZ(0.38, 0.56, a0, a0 + Math.PI / 18, 0.06, M.disc);
+      encDiscGroup.add(slot);
+    }
+
+    // Sensor Optocoupler Encoder Statis di atas Piringan
+    const encSensor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 0.22), mat(0x22c55e));
+    encSensor.position.set(0, 0.64, -1.55);
+    scene.add(encSensor);
+    addLabel('Sensor Encoder (Umpan Balik ω)', encSensor, 0, 0.26, 0, 'key');
+
+    // Roda Gila Beban (Flywheel) di ujung depan poros (Z = +1.55)
+    flywheelMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.26, 32), M.wheel);
+    flywheelMesh.rotation.x = Math.PI / 2;
+    flywheelMesh.position.z = 1.55;
+    // Palang penanda putaran pada roda beban
+    for (let i = 0; i < 4; i++) {
+      const spoke = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.08, 0.28), mat(0x38bdf8));
+      spoke.rotation.z = (i * Math.PI) / 2;
+      flywheelMesh.add(spoke);
+    }
+    rotorGroup.add(flywheelMesh);
+
+    // Sepatu Rem Mekanis (Brake Caliper) di atas & bawah Roda Beban
+    brakePadTop = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.18, 0.34), M.brake);
+    brakePadTop.position.set(0, 0.92, 1.55);
+    scene.add(brakePadTop);
+
+    brakePadBot = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.18, 0.34), M.brake);
+    brakePadBot.position.set(0, -0.92, 1.55);
+    scene.add(brakePadBot);
+
+    brakeGlow = sectorZ(0.66, 0.73, 0, Math.PI * 2, 0.28, new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0 }));
+    brakeGlow.position.z = 1.55;
+    scene.add(brakeGlow);
+    addLabel('Rem Beban Poros (Disturbance)', brakePadTop, 0, 0.24, 0, 'warn');
+
+    // 3. Papan Mikrokontroler (PID) & Driver PWM di sisi bawah-kiri
+    const pcbGroup = new THREE.Group();
+    pcbGroup.position.set(-1.65, -1.15, 0);
+    scene.add(pcbGroup);
+    const pcb = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.1, 2.2), M.pcb);
+    pcbGroup.add(pcb);
+    const mcuChip = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.12, 0.45), M.chip);
+    mcuChip.position.set(0, 0.1, -0.55);
+    pcbGroup.add(mcuChip);
+    const drvChip = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.55), mat(0xb45309));
+    drvChip.position.set(0, 0.14, 0.55);
+    pcbGroup.add(drvChip);
+    addLabel('Mikrokontroler (PID) & Driver PWM (ea)', pcbGroup, 0, 0.45, 0, 'key');
+
+    // Jalur Kabel Umpan Balik (Encoder -> MCU) & Jalur Daya PWM (Driver -> Motor)
+    const fbPath = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0.64, -1.55),
+      new THREE.Vector3(-1.3, 0.5, -1.55),
+      new THREE.Vector3(-1.65, -1.05, -0.55)
+    ]);
+    const pwmPath = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-1.65, -1.05, 0.55),
+      new THREE.Vector3(-0.85, -0.75, 0.35),
+      new THREE.Vector3(0, -0.65, 0)
+    ]);
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(fbPath, 24, 0.025, 8, false), new THREE.MeshBasicMaterial({ color: 0x22c55e })));
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(pwmPath, 24, 0.03, 8, false), new THREE.MeshBasicMaterial({ color: 0xf59e0b })));
+
+    for (let i = 0; i < 8; i++) {
+      const d1 = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), new THREE.MeshBasicMaterial({ color: 0x4ade80 }));
+      scene.add(d1);
+      fbDots.push({ m: d1, path: fbPath, t: i / 8 });
+
+      const d2 = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
+      scene.add(d2);
+      pwmDots.push({ m: d2, path: pwmPath, t: i / 8 });
+    }
+
+    function resize() {
+      const w = view.clientWidth, h = view.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    return true;
+  }
+
+  const ok3D = init3D();
+
+  // UI Sinkronisasi
+  const refSlider = $('refSlider'), kpSlider = $('kpSlider'), kiSlider = $('kiSlider'), kdSlider = $('kdSlider');
+  const loadSlider = $('loadSlider'), expSlider = $('expSlider'), btnToggleLoad = $('btnToggleLoad');
 
   function syncLabels() {
     wRef = parseFloat(refSlider.value);
-    refVal.textContent = `${wRef} RPM`;
-    kpVal.textContent = parseFloat(kpSlider.value).toFixed(2);
-    kiVal.textContent = parseFloat(kiSlider.value).toFixed(2);
-    kdVal.textContent = parseFloat(kdSlider.value).toFixed(3);
+    loadTorque = parseFloat(loadSlider.value);
+    expl = parseFloat(expSlider.value) / 100;
+    $('refVal').textContent = `${wRef} RPM`;
+    $('kpVal').textContent = fmt(parseFloat(kpSlider.value), 2);
+    $('kiVal').textContent = fmt(parseFloat(kiSlider.value), 2);
+    $('kdVal').textContent = fmt(parseFloat(kdSlider.value), 3);
+    $('loadVal').textContent = `${fmt(loadTorque, 2)} Nm`;
+    $('expVal').textContent = `${Math.round(expl * 100)}%`;
+
+    btnToggleLoad.textContent = loadTorque > 0
+      ? `🔥 Lepaskan Beban Rem (Beban Aktif = ${fmt(loadTorque, 2)} Nm)`
+      : '🏋️ Beri Beban Rem Poros (T_load = 0,00 Nm)';
+    btnToggleLoad.classList.toggle('active', loadTorque > 0);
   }
 
-  refSlider.addEventListener('input', syncLabels);
-  kpSlider.addEventListener('input', syncLabels);
-  kiSlider.addEventListener('input', syncLabels);
-  kdSlider.addEventListener('input', syncLabels);
+  [refSlider, kpSlider, kiSlider, kdSlider, loadSlider, expSlider].forEach(el => el.addEventListener('input', syncLabels));
 
-  document.getElementById('btnPOnly').addEventListener('click', () => {
+  $('btnPOnly').addEventListener('click', () => {
     wRef = 1000; refSlider.value = 1000;
     kpSlider.value = 0.18; kiSlider.value = 0.00; kdSlider.value = 0.000;
-    integErr = 0; loadTorque = 0;
-    btnToggleLoad.textContent = '🏋️ Beri Beban Rem Poros (T_load = 0.0 Nm)';
+    integErr = 0; loadSlider.value = 0;
     syncLabels();
   });
 
-  document.getElementById('btnPI').addEventListener('click', () => {
+  $('btnPI').addEventListener('click', () => {
     wRef = 1000; refSlider.value = 1000;
     kpSlider.value = 0.18; kiSlider.value = 0.45; kdSlider.value = 0.000;
     syncLabels();
   });
 
-  document.getElementById('btnPID').addEventListener('click', () => {
+  $('btnPID').addEventListener('click', () => {
     wRef = 1000; refSlider.value = 1000;
     kpSlider.value = 0.18; kiSlider.value = 0.45; kdSlider.value = 0.015;
     syncLabels();
   });
 
   btnToggleLoad.addEventListener('click', () => {
-    loadTorque = (loadTorque === 0) ? 0.35 : 0.0;
-    btnToggleLoad.textContent = loadTorque > 0
-      ? '🔥 Lepaskan Beban Rem (Beban Aktif = 0.35 Nm)'
-      : '🏋️ Beri Beban Rem Poros (T_load = 0.0 Nm)';
+    loadSlider.value = parseFloat(loadSlider.value) > 0 ? 0.00 : 0.35;
+    syncLabels();
+  });
+
+  $('btnLbl').addEventListener('click', e => {
+    showLabels = !showLabels;
+    e.target.classList.toggle('on', showLabels);
+  });
+
+  $('btnCut').addEventListener('click', e => {
+    cutaway = !cutaway;
+    e.target.classList.toggle('on', cutaway);
+    if (housingMesh) housingMesh.material.opacity = cutaway ? 0.22 : 0.85;
   });
 
   function stepPhysics() {
@@ -260,100 +505,43 @@
     const dW = (wActual - prevW) / dt;
     prevW = wActual;
 
-    // Sinyal kontrol tegangan jangkar ea (0 - 24V)
-    let ea = Kp * err + Ki * integErr - Kd * dW;
+    ea = Kp * err + Ki * integErr - Kd * dW;
     ea = Math.max(0, Math.min(24.0, ea));
 
-    // Back-EMF eb = Kb * wActual
-    const eb = Kb * wActual;
+    eb = Kb * wActual;
+    ia = Math.max(0, (ea - eb) / Ra);
+    torque = Kt * ia;
 
-    // Arus Jangkar ia = (ea - eb) / Ra
-    const ia = Math.max(0, (ea - eb) / Ra);
-
-    // Torsi Mekanis T = Kt * ia
-    const torque = Kt * ia;
-
-    // Hukum II Newton Rotasi: J0 * dw/dt = T - b0*w - T_load
     const netTorque = torque - (b0 * wActual) - loadTorque;
     const dw_dt = (netTorque / J0) * 6.0;
     wActual = Math.max(0, wActual + dw_dt * dt);
 
-    rotorAngle = (rotorAngle + (wActual * 360) / (60 * 60)) % 360;
+    rotorAngle += (wActual * Math.PI * 2) / (60 * 60);
 
     history.push({ wRef, wActual, ea, eb, ia });
     if (history.length > maxHist) history.shift();
 
     // Update Kartu Metrik
-    rpmMetric.textContent = `${Math.round(wActual)} RPM`;
+    $('rpmMetric').textContent = `${Math.round(wActual)} RPM`;
     const eNow = Math.round(wRef - wActual);
-    errMetric.textContent = `Steady-State Error: ${eNow} RPM`;
-    eaMetric.textContent = `${ea.toFixed(1)} V`;
-    ebMetric.textContent = `${eb.toFixed(1)} V`;
-    iaMetric.textContent = `${ia.toFixed(2)} A`;
-    torqueMetric.textContent = `${torque.toFixed(2)} Nm`;
-    loadSub.textContent = `Beban Luar: ${loadTorque.toFixed(2)} Nm`;
+    $('errMetric').textContent = `Steady-State Error: ${eNow} RPM`;
+    $('eaMetric').textContent = `${fmt(ea, 1)} V`;
+    $('pwmSub').textContent = `Duty Cycle: ${Math.round((ea / 24) * 100)}% (Maks 24 V)`;
+    $('ebMetric').textContent = `${fmt(eb, 1)} V`;
+    $('iaMetric').textContent = `${fmt(ia, 2)} A`;
+    $('torqueMetric').textContent = `${fmt(torque, 2)} Nm`;
+    $('loadSub').textContent = `Beban Luar: ${fmt(loadTorque, 2)} Nm`;
   }
 
-  function drawMotorWidget() {
-    mCtx.clearRect(0, 0, motorVis.width, motorVis.height);
-    const cx = motorVis.width / 2;
-    const cy = 125;
-    const r = 78;
-
-    // Stator luar
-    mCtx.beginPath();
-    mCtx.arc(0, 0, 0, 0, Math.PI * 2);
-    mCtx.save();
-    mCtx.translate(cx, cy);
-
-    mCtx.beginPath();
-    mCtx.arc(0, 0, r + 12, 0, Math.PI * 2);
-    mCtx.fillStyle = '#0f172a';
-    mCtx.fill();
-    mCtx.lineWidth = 4;
-    mCtx.strokeStyle = loadTorque > 0 ? '#ef4444' : '#334155';
-    mCtx.stroke();
-
-    // Rotor berputar
-    mCtx.rotate((rotorAngle * Math.PI) / 180);
-    mCtx.beginPath();
-    mCtx.arc(0, 0, r - 6, 0, Math.PI * 2);
-    mCtx.fillStyle = '#1e293b';
-    mCtx.fill();
-
-    // Palang kumparan jangkar
-    for (let i = 0; i < 6; i++) {
-      mCtx.rotate(Math.PI / 3);
-      mCtx.fillStyle = '#f59e0b';
-      mCtx.fillRect(-5, -r + 12, 10, 26);
-    }
-
-    // Poros tengah
-    mCtx.beginPath();
-    mCtx.arc(0, 0, 18, 0, Math.PI * 2);
-    mCtx.fillStyle = '#38bdf8';
-    mCtx.fill();
-    mCtx.restore();
-
-    // Info status bawah motor
-    mCtx.fillStyle = '#e2e8f0';
-    mCtx.font = 'bold 12px sans-serif';
-    mCtx.textAlign = 'center';
-    mCtx.fillText(loadTorque > 0 ? '⚠️ POROS DIREMAN BEBAN!' : '✅ POROS BEBAS (TANPA BEBAN)', cx, 240);
-    mCtx.fillStyle = '#94a3b8';
-    mCtx.font = '11px sans-serif';
-    mCtx.fillText(`PWM Suplai → Motor DC → Encoder`, cx, 258);
-  }
+  const teleCanvas = $('teleCanvas');
+  const tCtx = teleCanvas.getContext('2d');
 
   function drawTelemetry() {
     tCtx.clearRect(0, 0, teleCanvas.width, teleCanvas.height);
-    const w = teleCanvas.width;
-    const h = teleCanvas.height;
-    const padL = 50, padR = 20, padT = 26, padB = 28;
-    const pw = w - padL - padR;
-    const ph = h - padT - padB;
+    const w = teleCanvas.width, h = teleCanvas.height;
+    const padL = 42, padR = 16, padT = 26, padB = 24;
+    const pw = w - padL - padR, ph = h - padT - padB;
 
-    // Grid
     tCtx.strokeStyle = '#1e293b';
     tCtx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
@@ -361,14 +549,14 @@
       tCtx.beginPath(); tCtx.moveTo(padL, y); tCtx.lineTo(w - padR, y); tCtx.stroke();
     }
 
-    // Legend
-    tCtx.font = 'bold 11.5px sans-serif';
-    tCtx.fillStyle = '#94a3b8'; tCtx.fillText('--- Target ω_ref', padL + 5, 16);
-    tCtx.fillStyle = '#22c55e'; tCtx.fillText('─── Kecepatan ω (RPM)', padL + 125, 16);
-    tCtx.fillStyle = '#f59e0b'; tCtx.fillText('─── Tegangan PWM ea (V)', padL + 295, 16);
-    tCtx.fillStyle = '#ef4444'; tCtx.fillText('─── Arus Jangkar ia (Ampere)', padL + 475, 16);
+    tCtx.font = 'bold 11px sans-serif';
+    tCtx.fillStyle = '#94a3b8'; tCtx.fillText('--- ωref', padL + 4, 16);
+    tCtx.fillStyle = '#22c55e'; tCtx.fillText('─── ω (RPM)', padL + 75, 16);
+    tCtx.fillStyle = '#f59e0b'; tCtx.fillText('─── PWM ea (V)', padL + 175, 16);
+    tCtx.fillStyle = '#c084fc'; tCtx.fillText('─── Back-EMF eb (V)', padL + 290, 16);
+    tCtx.fillStyle = '#ef4444'; tCtx.fillText('─── Arus ia (A)', padL + 425, 16);
 
-    const plotLine = (fnY, color, dashed = false, width = 2.5) => {
+    const plotLine = (fnY, color, dashed = false, width = 2.4) => {
       tCtx.beginPath();
       tCtx.strokeStyle = color;
       tCtx.lineWidth = width;
@@ -385,20 +573,77 @@
     };
 
     plotLine(d => d.wRef / 1600, '#94a3b8', true, 1.8);
-    plotLine(d => d.wActual / 1600, '#22c55e', false, 3.0);
+    plotLine(d => d.wActual / 1600, '#22c55e', false, 2.8);
     plotLine(d => d.ea / 26, '#f59e0b', false, 2.0);
+    plotLine(d => d.eb / 26, '#c084fc', false, 1.8);
     plotLine(d => d.ia / 8, '#ef4444', false, 2.2);
+  }
+
+  const tmpV = ok3D ? new THREE.Vector3() : null;
+
+  function update3D() {
+    if (!ok3D) return;
+    rotorGroup.rotation.z = -rotorAngle;
+
+    // Exploded view
+    statorGroup.children[0].position.x = -0.85 * expl;
+    statorGroup.children[1].position.x = 0.85 * expl;
+    encDiscGroup.position.z = -1.55 - 0.55 * expl;
+    flywheelMesh.position.z = 1.55 + 0.55 * expl;
+
+    // Sepatu rem menekan roda beban saat loadTorque > 0
+    const clampOffset = loadTorque > 0 ? Math.min(0.18, loadTorque * 0.45) : 0;
+    brakePadTop.position.y = 0.92 - clampOffset;
+    brakePadBot.position.y = -0.92 + clampOffset;
+    brakePadTop.position.z = flywheelMesh.position.z;
+    brakePadBot.position.z = flywheelMesh.position.z;
+    brakeGlow.position.z = flywheelMesh.position.z;
+    brakeGlow.material.opacity = Math.min(0.65, loadTorque * 1.3);
+
+    // Warna pijar kumparan sebanding arus jangkar ia
+    const glowFactor = Math.min(1, ia / 5.0);
+    coilMeshes.forEach(c => {
+      c.material.color.setRGB(0.96, 0.62 - glowFactor * 0.38, 0.04);
+    });
+
+    // Animasi titik pulsa PWM & Feedback Encoder
+    const pwmSpeed = 0.004 + (ea / 24) * 0.022;
+    pwmDots.forEach(d => {
+      d.t = (d.t + pwmSpeed) % 1;
+      d.m.position.copy(d.path.getPointAt(d.t));
+      d.m.scale.setScalar(0.7 + glowFactor * 0.7);
+    });
+
+    const fbSpeed = 0.002 + (wActual / 1500) * 0.022;
+    fbDots.forEach(d => {
+      d.t = (d.t + fbSpeed) % 1;
+      d.m.position.copy(d.path.getPointAt(d.t));
+    });
+
+    labels.forEach(l => {
+      if (!showLabels) { l.el.style.display = 'none'; return; }
+      l.obj.getWorldPosition(tmpV);
+      tmpV.project(camera);
+      if (tmpV.z > 1) { l.el.style.display = 'none'; return; }
+      l.el.style.display = 'block';
+      l.el.style.left = ((tmpV.x + 1) / 2 * view.clientWidth) + 'px';
+      l.el.style.top = ((1 - tmpV.y) / 2 * view.clientHeight) + 'px';
+    });
+
+    controls.update();
+    renderer.render(scene, camera);
   }
 
   function animate() {
     stepPhysics();
-    drawMotorWidget();
+    update3D();
     drawTelemetry();
     requestAnimationFrame(animate);
   }
 
   syncLabels();
   animate();
+})();
 </script>
 
 </body>
